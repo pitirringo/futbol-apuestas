@@ -30,9 +30,7 @@ import statsmodels.api as sm
 from scipy.stats import poisson, skellam
 from sklearn.metrics import log_loss, mean_absolute_error
 
-# ── 0. Ubicación del código del equipo ────────────────────────────────────────
-# Por defecto se asume la estructura del repositorio: 06_proyecto/Codigo/... y
-# 06_proyecto/Dashboard-o-pagina/. Se puede cambiar con la variable RUTA_CODIGO.
+
 AQUI = Path(__file__).resolve().parent
 RUTA_CODIGO = Path(os.environ.get("RUTA_CODIGO", AQUI.parent / "Codigo" / "proyecto_mod_8")).resolve()
 ARCHIVO_HISTORICO = RUTA_CODIGO / "E0_consolidado.csv"
@@ -64,7 +62,7 @@ def _importar_wc_predictor():
 
 wc_predictor = _importar_wc_predictor()
 
-# ── 1. Configuración idéntica a Analisis.ipynb (sección 1) ────────────────────
+
 FECHA_INICIO = pd.Timestamp("2019-08-01")
 FECHA_VALIDACION = pd.Timestamp("2024-08-01")
 FECHA_PRUEBA = pd.Timestamp("2025-08-01")
