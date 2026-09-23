@@ -1,0 +1,53 @@
+<script>
+// Plotly mide etiquetas y anotaciones cuando dibuja la gráfica. Si en ese momento la página o
+// pestaña del tablero todavía no tiene tamaño (está oculta), las mediciones salen en cero y las
+// etiquetas desaparecen o se salen de la tarjeta. El redimensionado normal no lo corrige.
+// Solución: volver a dibujar desde cero (Plotly.newPlot) cada gráfica cuando su contenedor
+// adquiere tamaño real (ResizeObserver), al cargar la página y al cambiar de página o pestaña.
+//
+// Ojo: como la página incluye require.js, Plotly se carga como módulo y queda en
+// window._Plotly en lugar de window.Plotly; por eso se buscan ambos.
+(function () {
+  function plotly() { return window.Plotly || window._Plotly || null; }
+
+  function redibujar(el) {
+    var P = plotly();
+    if (!P || !el.data || el.offsetParent === null || el.clientWidth === 0) return;
+    P.newPlot(el, el.data, el.layout, el._context);
+  }
+
+  function redibujarVisibles() {
+    document.querySelectorAll(".js-plotly-plot").forEach(redibujar);
+  }
+
+  var tamanos = new WeakMap();
+  var observador = ("ResizeObserver" in window) ? new ResizeObserver(function (entradas) {
+    entradas.forEach(function (entrada) {
+      var el = entrada.target;
+      var w = Math.round(entrada.contentRect.width), h = Math.round(entrada.contentRect.height);
+      var previo = tamanos.get(el) || [0, 0];
+      tamanos.set(el, [w, h]);
+      // Redibuja al pasar de oculto (0 px) a visible, o ante un cambio grande de tamaño.
+      var cambio = previo[0] === 0 || Math.abs(previo[0] - w) > 40 || Math.abs(previo[1] - h) > 40;
+      if (w > 0 && h > 0 && cambio) {
+        clearTimeout(el.__temporizador);
+        el.__temporizador = setTimeout(function () { redibujar(el); }, 120);
+      }
+    });
+  }) : null;
+
+  function vigilar() {
+    if (!observador) return;
+    document.querySelectorAll(".js-plotly-plot").forEach(function (el) {
+      if (!el.__vigilada) { el.__vigilada = true; observador.observe(el); }
+    });
+  }
+
+  window.addEventListener("load", function () {
+    vigilar();
+    setTimeout(redibujarVisibles, 250);
+    setTimeout(function () { vigilar(); redibujarVisibles(); }, 1500);  // equipos lentos
+  });
+  document.addEventListener("shown.bs.tab", function () { setTimeout(redibujarVisibles, 80); });
+})();
+</script>

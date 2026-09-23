@@ -1,0 +1,10 @@
+# Salida generada: GitHub Actions la vuelve a construir en cada push
+_site/
+.quarto/
+index_files/
+index.html
+__pycache__/
+*.pyc
+
+/.quarto/
+**/*.quarto_ipynb

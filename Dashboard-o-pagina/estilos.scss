@@ -1,0 +1,193 @@
+/*-- scss:defaults --*/
+// Base: tema cosmo (el mismo del ejemplo de clase), con la paleta del tablero.
+$primary: #2a78d6;
+$font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$body-bg: #f6f6f3;
+$body-color: #0b0b0b;
+$navbar-bg: #ffffff;
+$navbar-fg: #0b0b0b;
+$navbar-hl: #2a78d6;
+$link-color: #256abf;
+$border-radius: .6rem;
+
+/*-- scss:rules --*/
+// Paleta compartida con graficas.py
+:root {
+  --modelo: #2a78d6;
+  --mercado: #eb6834;
+  --local: #008300;
+  --visita: #4a3aa7;
+  --contexto: #898781;
+  --tinta: #0b0b0b;
+  --tinta-2: #52514e;
+  --rejilla: #e1e0d9;
+}
+
+.navbar {
+  border-bottom: 1px solid var(--rejilla);
+  .navbar-title { font-weight: 650; letter-spacing: -.01em; }
+}
+
+.card {
+  border: 1px solid rgba(11, 11, 11, .10);
+  box-shadow: none;
+}
+.card-header {
+  background: #fff;
+  border-bottom: none;
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--tinta);
+  padding-top: .8rem;
+}
+.card-body { color: var(--tinta); }
+.card-body p, .card-body li { line-height: 1.5; }
+
+.subtitulo {
+  color: var(--tinta-2);
+  font-size: .86rem;
+  margin: -.2rem 0 0 0;
+}
+
+// Quarto coloca el texto de una tarjeta y la salida de la celda en cuerpos separados, y
+// ambos crecen por igual: el texto le quitaba altura a la gráfica y aparecía una barra de
+// desplazamiento interna. El texto que acompaña a una celda ocupa sólo su alto natural.
+.card > .card-body:not(.cell):has(+ .cell),
+.card > .cell + .card-body:not(.cell) {
+  flex: 0 0 auto !important;
+  padding-bottom: .25rem;
+}
+
+// Value boxes sobrios: fondo con un tinte muy claro de la entidad que describen.
+.bslib-value-box {
+  border: 1px solid rgba(11, 11, 11, .10) !important;
+  .value-box-title { font-size: .92rem; font-weight: 600; color: var(--tinta-2); margin-bottom: .1rem; }
+  .value-box-value { font-size: 2.3rem !important; font-weight: 650; letter-spacing: -.02em; line-height: 1.1; }
+  p:not(.value-box-title):not(.value-box-value) { font-size: .82rem; color: var(--tinta-2); margin-bottom: 0; }
+  .value-box-showcase { color: var(--tinta-2); opacity: .75; }
+}
+
+.pregunta {
+  border-left: 4px solid var(--modelo) !important;
+  p { margin-bottom: .35rem; font-size: 1rem; }
+}
+
+.lectura {
+  ol { padding-left: 1.2rem; margin-bottom: .5rem; }
+  li { margin-bottom: .55rem; }
+  .ruta { font-size: .85rem; color: var(--tinta-2); border-top: 1px solid var(--rejilla); padding-top: .5rem; }
+}
+
+.nota {
+  font-size: .82rem;
+  color: var(--tinta-2);
+}
+
+// Tablas
+.tabla-contenedor { overflow: auto; max-height: 100%; }
+table.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .86rem;
+  font-variant-numeric: tabular-nums;
+  th {
+    text-align: left;
+    color: var(--tinta-2);
+    font-weight: 600;
+    border-bottom: 1px solid #c3c2b7;
+    padding: .35rem .6rem;
+    position: sticky;
+    top: 0;
+    background: #fff;
+  }
+  td { border-bottom: 1px solid var(--rejilla); padding: .32rem .6rem; }
+  tr:hover td { background: #f6f6f3; }
+}
+
+// Diagrama de flujo del modelo (HTML en lugar de Mermaid: Mermaid no se dibuja cuando la
+// página del tablero está oculta al cargar). Quarto agrega `html-fill-container` a cada div
+// de la tarjeta, que impone dirección en columna; por eso las reglas usan !important.
+.flujo.html-fill-container, .flujo {
+  display: flex;
+  flex-direction: row !important;
+  align-items: stretch;
+  gap: .4rem;
+  flex-wrap: nowrap;
+  height: 100%;
+  font-size: .86rem;
+  > .flecha { flex: 0 0 auto !important; }
+  .paso {
+    flex: 1 1 0 !important;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: .4rem;
+    background: #fff;
+    border: 1px solid rgba(11, 11, 11, .12);
+    border-left: 4px solid var(--contexto);
+    border-radius: .5rem;
+    padding: .5rem .7rem;
+    b { color: var(--tinta); }
+    span { color: var(--tinta-2); display: block; }
+    &.modelo { border-left-color: var(--modelo); }
+    &.mercado { border-left-color: var(--mercado); }
+    &.compara { border-left-color: var(--tinta); background: #f6f6f3; }
+  }
+  .sub { flex: 0 0 auto !important; border-top: 1px dashed var(--rejilla); padding-top: .35rem; }
+  .sub:first-of-type { border-top: none; padding-top: 0; }
+  .flecha { align-self: center; color: var(--contexto); font-size: 1.2rem; }
+}
+
+// Simulador
+.sim-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .75rem;
+}
+.sim-kpi {
+  border: 1px solid rgba(11, 11, 11, .10);
+  border-radius: .6rem;
+  padding: .7rem 1rem;
+  background: #fff;
+  border-top: 5px solid var(--contexto);
+  &.local { border-top-color: var(--local); }
+  &.visita { border-top-color: var(--visita); }
+  .etq { color: var(--tinta-2); font-size: .9rem; font-weight: 600; }
+  .val { font-size: 2.3rem; font-weight: 650; letter-spacing: -.02em; line-height: 1.15; }
+  .det { color: var(--tinta-2); font-size: .82rem; }
+}
+.sim-aviso {
+  font-size: .8rem;
+  color: var(--tinta-2);
+  border-top: 1px solid var(--rejilla);
+  padding-top: .6rem;
+  margin-top: .6rem;
+}
+
+@media (max-width: 768px) {
+  .sim-kpis { grid-template-columns: 1fr; }
+  .flujo { flex-wrap: wrap; .paso { flex: 1 1 40% !important; } > .flecha { display: none; } }
+}
+
+// Leyendas en HTML (en lugar de las de Plotly, que se enciman si la página está oculta al dibujar)
+.leyenda {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  margin: .3rem 1rem 0 0;
+  white-space: nowrap;
+  font-size: .84rem;
+  color: var(--tinta-2);
+}
+.muestra {
+  display: inline-block;
+  width: .8rem;
+  height: .8rem;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  &.circulo { border-radius: 50%; }
+  &.hueco { background: transparent; border: 2px solid var(--tinta-2); }
+  &.linea { width: 1.3rem; height: 3px; border-radius: 2px; }
+  &.rombo { width: .62rem; height: .62rem; border-radius: 1px; transform: rotate(45deg); }
+}

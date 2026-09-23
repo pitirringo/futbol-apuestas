@@ -1,0 +1,11 @@
+# Mismas versiones con las que el equipo obtuvo los resultados (Python 3.10).
+# Fijarlas garantiza que el tablero reproduzca exactamente las cifras del notebook.
+pandas==2.2.3
+numpy==2.2.3
+scipy==1.15.2
+statsmodels==0.14.4
+scikit-learn==1.6.1
+plotly==5.24.1
+# Motor de Quarto para ejecutar Python (incluye ipykernel, nbclient y PyYAML)
+jupyter
+pyyaml

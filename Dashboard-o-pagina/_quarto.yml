@@ -1,0 +1,12 @@
+project:
+  type: default
+  output-dir: _site
+  render:
+    - index.qmd
+
+lang: es
+
+execute:
+  echo: false
+  warning: false
+  message: false

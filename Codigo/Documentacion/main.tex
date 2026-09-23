@@ -1,0 +1,688 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.4cm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,tabularx,array}
+\usepackage{microtype}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{needspace}
+\definecolor{ink}{HTML}{263341}
+\definecolor{accent}{HTML}{31556A}
+\definecolor{ruleline}{HTML}{B6C2C8}
+\hypersetup{colorlinks=true,linkcolor=accent,urlcolor=accent,
+  pdftitle={Modelo predictivo de resultados de la Premier League: desarrollo y evaluación},
+  pdfauthor={Proyecto de modelación estadística}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.58em}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.19}
+\titleformat{\section}{\normalfont\Large\color{ink}}{\thesection.}{0.65em}{}
+\titleformat{\subsection}{\normalfont\large\color{ink}}{\thesubsection.}{0.65em}{}
+\titlespacing*{\section}{0pt}{1.4em}{0.55em}
+\titlespacing*{\subsection}{0pt}{1.0em}{0.35em}
+\captionsetup{labelfont=normalfont,textfont=normalfont,justification=centering}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Modelo predictivo de Premier League}
+\fancyhead[R]{\small Reporte técnico}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\EloDiff}{D}
+\begin{document}
+\begin{titlepage}
+\centering
+\vspace*{2.7cm}
+{\color{accent}\rule{\textwidth}{0.7pt}\par}
+\vspace{1.0cm}
+{\fontsize{22}{27}\selectfont Modelo predictivo de resultados\par de la Premier League\par}
+\vspace{0.8cm}
+{\large Construcción, estimación y evaluación fuera de muestra\par}
+\vspace{1.0cm}
+{\color{accent}\rule{\textwidth}{0.7pt}\par}
+\vspace{1.5cm}
+{\large Reporte técnico de avance de proyecto\par}
+\vspace{0.5cm}
+{\normalsize Histórico de partidos: 18 de agosto de 2001--14 de septiembre de 2026\par}
+{\normalsize Fecha del reporte: 20 de septiembre de 2026\par}
+\vfill
+\begin{minipage}{0.86\textwidth}
+\small
+El presente informe documenta una etapa concluida del desarrollo de un sistema de predicción de partidos. Presenta el diseño estadístico, los resultados de entrenamiento, validación y prueba, y una aplicación ilustrativa. Las mejoras que pueden explorarse en etapas posteriores se distinguen de los resultados obtenidos hasta la fecha.
+\end{minipage}
+\vspace{1.1cm}
+\end{titlepage}
+
+\section{Resumen}
+Se desarrolló un modelo probabilístico para partidos de la Premier League mediante dos regresiones de Poisson: una para los goles del equipo local y otra para los del visitante. Sus predictores se construyen con información anterior a cada partido e incluyen una clasificación Elo, estadísticas de goles ajustadas por temporada y, en las versiones ampliadas, indicadores de forma reciente, tiros y tiros a puerta. A partir de los goles esperados se estiman las probabilidades de victoria local, empate, victoria visitante y marcador exacto.
+
+La base consolidada contiene 9\,450 partidos y 33 variables. Los parámetros de las regresiones se ajustaron con 1\,897 partidos, se compararon cinco especificaciones sobre 380 encuentros de validación y se evaluaron tres de ellas sobre 419 partidos de prueba, correspondientes al periodo del 15 de agosto de 2025 al 14 de septiembre de 2026. El mercado de apertura se utilizó exclusivamente como referencia predictiva, no como variable explicativa.
+
+En validación, la especificación M4, que reúne nueve regresores por ecuación, registró el menor Log-Loss 1X2 entre los modelos desarrollados: 0.975296, frente a 0.983690 de la especificación base M0. En prueba, esa ventaja no se mantuvo: M0 obtuvo un Log-Loss de 1.030556 y M4 de 1.034434; el mercado de apertura registró 1.020000. M4 presentó el menor error absoluto medio de goles en prueba, 0.897635, frente a 0.900854 de M0.
+
+\section{Objetivo y datos}
+\subsection{Objetivo del sistema}
+El sistema estima, a partir de las características de ambos equipos conocidas antes del encuentro, el número esperado de goles del local y del visitante. Estas dos estimaciones se transforman en probabilidades para los tres resultados del partido, denominados 1X2: victoria local (1), empate (X) y victoria visitante (2). El presente reporte cubre una etapa del proyecto y se limita a la evaluación de las especificaciones desarrolladas hasta septiembre de 2026.
+
+\subsection{Consolidación y preparación del histórico}
+Se integraron los archivos CSV de resultados y estadísticas
+de la Premier League en una base de datos consolidada,
+\code{E0\_consolidado.csv}. El procedimiento de limpieza,
+homologación y consolidación de los datos se documenta en
+el notebook \code{limpieza de datos.ipynb}. Los registros se identificaron por fecha, local y visitante; se normalizaron los nombres de las columnas esenciales, se convirtieron las fechas a formato temporal y se ordenaron los encuentros cronológicamente. Se mantuvieron los resultados finales, estadísticas de tiros y tiros a puerta, variables complementarias y cuotas de mercado. La ausencia de cuotas o de goles esperados observados en una temporada no motivó la eliminación del encuentro del histórico maestro.
+
+La base incluye resultados desde el 18 de agosto de 2001 hasta el 14 de septiembre de 2026. Las temporadas 2003/04 y 2004/05 contienen 335 registros cada una, por lo que su cobertura es inferior a la de una temporada completa de 380 partidos. Esta limitación del histórico debe considerarse al calcular indicadores de largo plazo.
+
+\begin{table}[H]
+\centering\small
+\caption{Variables principales del conjunto consolidado y su función en el análisis.}
+\begin{tabularx}{\textwidth}{p{0.31\textwidth}X}
+\toprule
+Variables explicativas & Uso en el proyecto\\
+\midrule
+\code{Date}, \code{HomeTeam}, \code{AwayTeam} & Identificación y orden temporal de los encuentros.\\
+\code{FTHG}, \code{FTAG}, \code{FTR} & Goles observados y resultado final; variables objetivo y categoría 1X2.\\
+\code{HS}, \code{AS}, \code{HST}, \code{AST} & Construcción de tiros y tiros a puerta a favor y en contra en partidos anteriores.\\
+\code{AvgH}, \code{AvgD}, \code{AvgA} & Cuotas promedio de apertura usadas para la referencia de mercado.\\
+Otros campos & Córners, faltas, tarjetas, árbitro, cuotas de cierre y xG, conservados para etapas posteriores.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Para la modelación, los goles y las estadísticas observadas del partido a pronosticar se reservaron como resultados mientras que las observaciones de encuentros anteriores se utilizaron para construir sus características. La temporada se delimitó operativamente entre el 1 de agosto y el 31 de julio siguiente.
+
+\section{Construcción de variables prepartido}
+\subsection{Clasificación Elo}
+La clasificación Elo resume la fuerza relativa de los equipos a partir de sus resultados históricos. La calificación inicial fue de 1\,500 puntos, con constante de actualización $K=30$. Para un partido entre local $H$ y visitante $A$, la expectativa del local y las actualizaciones posteriores se definieron como
+\begin{align}
+E_H&=\frac{1}{1+10^{(R_A-R_H)/400}}, & E_A&=1-E_H,\\
+R_H^{\mathrm{nuevo}}&=R_H^{\mathrm{previo}}+K(S_H-E_H), &
+R_A^{\mathrm{nuevo}}&=R_A^{\mathrm{previo}}+K(S_A-E_A),
+\end{align}
+donde $S_H=1$, $0.5$ o $0$ según victoria, empate o derrota del local, y $S_A=1-S_H$. Para cada partido se almacenaron las calificaciones anteriores a su celebración. La variable incorporada a las regresiones fue
+\begin{equation}
+D_t=\frac{R_{H,t^-}-R_{A,t^-}}{400}.
+\label{eq:elo}
+\end{equation}
+
+\subsection{Promedios ajustados de goles de temporada}
+Para reducir la inestabilidad de los promedios al comienzo de cada temporada, se combinaron los resultados disponibles de la campaña vigente con la referencia de la temporada anterior. Si $n_t$ denota los partidos disputados antes de la fecha $t$, $k=10$ la intensidad de la referencia y $\overline{GF}$, $\overline{GA}$ los respectivos promedios, se aplicó
+\begin{align}
+GF_{t}^{\mathrm{aj}}&=\frac{n_t}{n_t+k}\,\overline{GF}_{t}^{\mathrm{actual}}
+                  +\frac{k}{n_t+k}\,\overline{GF}^{\mathrm{previa}},\\
+GA_{t}^{\mathrm{aj}}&=\frac{n_t}{n_t+k}\,\overline{GA}_{t}^{\mathrm{actual}}
+                  +\frac{k}{n_t+k}\,\overline{GA}^{\mathrm{previa}}.
+\label{eq:shrinkage}
+\end{align}
+Las variables $GF$ y $GA$ del resto del informe se refieren a esos promedios ajustados. Cuando un equipo no tenía registros en la temporada previa de Premier League, la implementación recurría a un promedio de liga de referencia. Cabe mencionar que la elección $k=10$ fue operativa y no resultado de una optimización formal.
+
+\subsection{Forma reciente, tiros y tiros a puerta}
+Para cada equipo se calcularon promedios de sus últimos diez encuentros anteriores al partido objetivo. Se aplicó una ponderación geométrica con $d=0.85$, asignando mayor peso al encuentro más reciente. Para $m\leq10$ registros ordenados del más antiguo al más reciente,
+\begin{equation}
+\widetilde w_i=d^{m-i},\qquad
+w_i=\frac{\widetilde w_i}{\sum_{j=1}^{m}\widetilde w_j},\qquad
+\overline x_{10}=\sum_{i=1}^{m}w_i x_i.
+\label{eq:form}
+\end{equation}
+Esta transformación se aplicó a goles marcados y recibidos, tiros realizados y concedidos, y tiros a puerta realizados y concedidos. Los indicadores describen el rendimiento anterior de cada equipo, por lo que no incorporan las estadísticas del encuentro que se desea pronosticar.
+
+\section{Especificación y estimación estadística}
+\subsection{Regresiones de Poisson}
+Se estimaron dos modelos lineales generalizados con distribución de Poisson y enlace logarítmico. Para $s\in\{H,A\}$,
+\begin{equation}
+G_s\mid X_s\sim\operatorname{Poisson}(\lambda_s),\qquad
+\Prob(G_s=g\mid\lambda_s)=\frac{e^{-\lambda_s}\lambda_s^g}{g!},\qquad
+\log\lambda_s=X_s\beta_s.
+\label{eq:poisson}
+\end{equation}
+Los parámetros se obtuvieron por máxima verosimilitud, maximizando
+\begin{equation}
+\ell(\beta_s)=\sum_{i=1}^{n}\left[g_{s,i}\log\lambda_{s,i}-\lambda_{s,i}-\log(g_{s,i}!)\right],
+\qquad \lambda_{s,i}=\exp(X_{s,i}\beta_s).
+\label{eq:likelihood}
+\end{equation}
+Se ajustó una regresión para los goles locales y otra para los visitantes. Esta separación permite recoger diferencias sistemáticas de condición local y visitante mediante sus respectivos parámetros.
+
+\subsection{Especificaciones comparadas}
+Se estimaron cinco alternativas sobre los mismos 1\,897 partidos de entrenamiento. En todas ellas se incluyeron $D$, los goles ajustados a favor del equipo atacante y los goles ajustados recibidos por el rival.
+
+\begin{table}[H]
+\centering\small
+\caption{Especificaciones estimadas y número de regresores por ecuación, sin contar el intercepto.}
+\begin{tabularx}{\textwidth}{p{0.18\textwidth}Xp{0.18\textwidth}}
+\toprule
+Modelo & Características explicativas & Regresores\\
+\midrule
+M0, base & Elo y goles ajustados de temporada. & 3\\
+M1, forma & M0 más goles recientes a favor y recibidos por el rival. & 5\\
+M2, tiros & M0 más tiros recientes efectuados y concedidos por el rival. & 5\\
+M3, tiros a puerta & M0 más tiros a puerta recientes efectuados y concedidos por el rival. & 5\\
+M4, completo & M0, tiros totales y tiros a puerta. & 9\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Las regresiones estimadas para la especificación base M0 fueron
+\begin{align}
+\log\widehat\lambda_H&=-0.3864+0.4082D+0.3338GF_H+0.2158GA_A,\\
+\log\widehat\lambda_A&=-0.3009-0.4870D+0.2101GF_A+0.1589GA_H.
+\label{eq:m0}
+\end{align}
+
+Para M4, denotando $GF_{s,10}$ y $GA_{s,10}$ los goles recientes, $T_{s,10}^{+}$ y $T_{s,10}^{-}$ los tiros realizados y concedidos, y $P_{s,10}^{+}$ y $P_{s,10}^{-}$ los tiros a puerta realizados y concedidos, las ecuaciones estimadas fueron
+\begin{align}
+\log\widehat\lambda_H={}&-0.8416+0.3245D+0.3311GF_H+0.0876GA_A\notag\\
+&-0.0675GF_{H,10}-0.0102GA_{A,10}+0.0219T^+_{H,10}+0.0267T^-_{A,10}\notag\\
+&+0.0119P^+_{H,10}+0.0176P^-_{A,10},\\[0.3em]
+\log\widehat\lambda_A={}&-0.8460-0.3987D+0.0314GF_A+0.0217GA_H\notag\\
+&+0.0336GF_{A,10}-0.0074GA_{H,10}+0.0323T^+_{A,10}+0.0378T^-_{H,10}\notag\\
+&+0.0215P^+_{A,10}-0.0100P^-_{H,10}.
+\label{eq:m4}
+\end{align}
+
+ El criterio principal para comparar las especificaciones de cada modelo fue su comportamiento predictivo en datos posteriores al entrenamiento.
+
+\subsection{De goles esperados a probabilidades 1X2}
+Se supuso independencia condicional entre los goles de ambos equipos. Por tanto, para un marcador exacto $h$--$a$,
+\begin{equation}
+\Prob(G_H=h,G_A=a)=\frac{e^{-\lambda_H}\lambda_H^h}{h!}\,
+\frac{e^{-\lambda_A}\lambda_A^a}{a!}.
+\label{eq:score}
+\end{equation}
+La diferencia $G_H-G_A$ sigue entonces una distribución de Skellam, y las probabilidades de victoria local, empate y victoria visitante se calcularon como
+\begin{align}
+p_1&=\Prob(G_H>G_A), & p_X&=\Prob(G_H=G_A), & p_2&=\Prob(G_H<G_A),
+\qquad p_1+p_X+p_2=1.
+\label{eq:1x2}
+\end{align}
+El marcador exacto modal corresponde al par $(h,a)$ que maximiza la expresión~\eqref{eq:score}. Una categoría 1X2 agrega las probabilidades de muchos marcadores y, por tanto, no coincide necesariamente con el marcador exacto más probable.
+
+\section{Diseño de evaluación}
+\subsection{Partición temporal y métricas}
+La base de modelación se dividió cronológicamente. El conjunto de entrenamiento comprendió partidos desde agosto de 2019 hasta antes de agosto de 2024 ($n=1\,897$); validación correspondió a la temporada 2024/25 ($n=380$); y prueba abarcó desde el 15 de agosto de 2025 hasta el 14 de septiembre de 2026 ($n=419$). Los coeficientes ajustados en entrenamiento no se volvieron a estimar para evaluar validación o prueba. Las especificaciones M0--M4 se compararon en validación y M0, M2 y M4 se contrastaron posteriormente en prueba.
+
+Para los goles se empleó el error absoluto medio por equipo y su media simple. Para las probabilidades 1X2 se calculó el Log-Loss multiclase:
+\begin{align}
+\operatorname{MAE}_{\mathrm{prom}}&=\frac{1}{2N}\sum_{i=1}^{N}\bigl(
+|g_{H,i}-\widehat\lambda_{H,i}|+|g_{A,i}-\widehat\lambda_{A,i}|\bigr),\\
+\operatorname{LogLoss}_{1X2}&=-\frac{1}{N}\sum_{i=1}^{N}\log\widehat p_{i,y_i},
+\label{eq:metrics}
+\end{align}
+donde $y_i$ es el resultado observado y $\widehat p_{i,y_i}$ la probabilidad asignada a esa categoría. Un valor menor indica menor error en la muestra considerada.
+
+\subsection{Referencia externa: cuotas de apertura}
+Para cada encuentro se transformaron las cuotas decimales promedio de apertura $o_1,o_X,o_2$ en probabilidades implícitas normalizadas:
+\begin{equation}
+q_j=\frac{1}{o_j},\qquad
+p_j^{\mathrm{mercado}}=\frac{q_j}{q_1+q_X+q_2},\qquad
+j\in\{1,X,2\}.
+\label{eq:market}
+\end{equation}
+Esta normalización retira el margen bruto de manera proporcional, no identifica necesariamente las probabilidades subyacentes exactas del mercado. La referencia de mercado se calculó sobre los mismos partidos que los modelos estadísticos: 380 en validación y 419 en prueba. Las cuotas no intervinieron en la estimación de las regresiones.
+
+\section{Resultados}
+\subsection{Validación: temporada 2024/25}
+Los cinco modelos se evaluaron sobre los mismos 380 partidos. La tabla presenta el error en goles y en probabilidades, junto con la referencia del mercado de apertura.
+
+\begin{table}[H]
+\centering\small
+\caption{Desempeño observado en el conjunto de validación ($n=380$).}
+\begin{tabular}{lrr}
+\toprule
+Especificación & MAE promedio & Log-Loss 1X2\\
+\midrule
+M0, base & 0.927692 & 0.983690\\
+M1, forma reciente & 0.927916 & 0.982334\\
+M2, tiros & 0.924496 & 0.977038\\
+M3, tiros a puerta & 0.925152 & 0.977225\\
+M4, completo & 0.925018 & 0.975296\\
+Mercado de apertura & --- & 0.970600\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La ampliación de las variables se acompañó de una reducción del Log-Loss en esta muestra: M4 registró una diferencia de $-0.008394$ frente a M0 y de $-0.001742$ frente a M2. M2 presentó el menor MAE de goles de los modelos comparados. El mercado obtuvo un Log-Loss de 0.970600, inferior al de las cinco especificaciones. El margen bruto promedio reportado para las cuotas de apertura en validación fue de 4.49\%.
+
+\subsection{Dependencia entre variables explicativas}
+La relación entre los predictores se examinó mediante correlaciones de Pearson y factores de inflación de la varianza:
+\begin{equation}
+\operatorname{VIF}_j=\frac{1}{1-R_j^2},
+\label{eq:vif}
+\end{equation}
+donde $R_j^2$ procede de una regresión auxiliar de la variable $j$ sobre las restantes. En las ecuaciones local y visitante, respectivamente, la correlación entre tiros totales realizados y tiros a puerta realizados fue 0.854 y 0.848; entre tiros concedidos y tiros a puerta concedidos fue 0.818 y 0.823. Los VIF más altos correspondieron a tiros a puerta realizados: 5.517 para local y 5.281 para visitante.
+
+Los diagnósticos son compatibles con redundancia parcial entre los indicadores y ayudan a contextualizar la incertidumbre de los coeficientes individuales. No constituyen, por sí mismos, una razón para eliminar variables: su pertinencia predictiva debe evaluarse sobre partidos no empleados para ajustar los parámetros.
+
+\subsection{Prueba fuera de muestra: agosto de 2025--septiembre de 2026}
+Se calcularon predicciones para 419 partidos con las regresiones previamente ajustadas. Todos los encuentros evaluados contaban con las tres cuotas promedio de apertura, de modo que la comparación con el mercado se realizó sin reducir la muestra.
+
+\begin{table}[H]
+\centering\small
+\caption{Desempeño fuera de muestra de los modelos ($n=419$).}
+\begin{tabular}{lrrrr}
+\toprule
+Especificación & MAE local & MAE visitante & MAE promedio & Log-Loss 1X2\\
+\midrule
+M0, base & 0.954649 & 0.847060 & 0.900854 & 1.030556\\
+M2, tiros & 0.945192 & 0.855826 & 0.900509 & 1.035184\\
+M4, completo & 0.940582 & 0.854688 & 0.897635 & 1.034434\\
+Mercado de apertura & --- & --- & --- & 1.020000\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+En prueba, M4 presentó el menor MAE promedio de goles, 0.897635, frente a 0.900854 de M0. La diferencia fue de 0.003219 goles de error absoluto promedio por equipo y partido. En cambio, M0 registró el menor Log-Loss entre las especificaciones desarrolladas: 1.030556 frente a 1.034434 de M4 y 1.035184 de M2. La diferencia de M4 respecto a M0 fue de 0.003878 unidades de Log-Loss. El mercado de apertura registró 1.020000, menor que el obtenido por los tres modelos.
+
+La menor pérdida en goles esperados no garantizó una menor pérdida en probabilidades 1X2: ambas métricas evalúan propiedades diferentes de las predicciones. La ventaja de M4 en Log-Loss observada durante validación no se reprodujo en prueba. Estas comparaciones describen los valores observados y no establecen, por sí solas, diferencias estadísticamente significativas ni resultados persistentes en periodos futuros.
+
+\section{Aplicación ilustrativa: Arsenal--Manchester City}
+Para ilustrar el funcionamiento del sistema, se planteó un enfrentamiento hipotético con Arsenal como local y Manchester City como visitante, utilizando la información del archivo disponible antes del 20 de septiembre de 2026. El ejercicio aplica los parámetros de M0 y M4 sin reestimar sus coeficientes y no se contabiliza como partido de prueba.
+
+\begin{table}[H]
+\centering\small
+\caption{Predicción ilustrativa con las dos especificaciones.}
+\begin{tabularx}{\textwidth}{Xrr}
+\toprule
+Indicador & M0 & M4\\
+\midrule
+Goles esperados de Arsenal & 1.566 & 1.562\\
+Goles esperados de Manchester City & 1.202 & 1.211\\
+Victoria de Arsenal (1) & 45.76\% & 45.46\%\\
+Empate (X) & 24.97\% & 24.98\%\\
+Victoria de Manchester City (2) & 29.27\% & 29.56\%\\
+Marcador exacto más probable & 1--1 & 1--1\\
+Probabilidad del marcador 1--1 & 11.82\% & 11.82\%\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+En ambas especificaciones, el marcador modal fue 1--1 y la victoria de Arsenal concentró la mayor probabilidad 1X2, pues agrega numerosos marcadores distintos. Frente a M0, M4 modificó la probabilidad de victoria local en $-0.30$ puntos porcentuales y la visitante en $+0.29$. La evaluación del sistema corresponde a las muestras históricas, no a este encuentro hipotético.
+
+\section{Alcance, limitaciones y conclusión}
+El modelo desarrollado produce medias esperadas de goles y probabilidades 1X2 a partir de variables futbolísticas disponibles antes de los encuentros. El análisis se basa en un histórico consolidado, un esquema explícito de construcción de características y una evaluación temporal separada en entrenamiento, validación y prueba. Los resultados de prueba completan la evaluación de esta versión del sistema: el modelo ampliado M4 redujo ligeramente el MAE de goles frente a M0, pero no mejoró su Log-Loss 1X2, y ninguno de los modelos obtuvo una pérdida logarítmica inferior a la referencia de mercado en los 419 partidos considerados.
+
+Las diferencias observadas requieren interpretación prudente. Las regresiones utilizan dos distribuciones de Poisson condicionalmente independientes, no modelan explícitamente la dependencia entre goles, las alineaciones, lesiones u otras circunstancias del encuentro. Se emplearon parámetros operativos $K=30$, $k=10$, $d=0.85$ y una ventana de diez partidos sin una optimización temporal exhaustiva. La cobertura incompleta de algunas temporadas y el tratamiento de clubes ascendidos pueden afectar las características históricas. La comparación con el mercado corresponde a cuotas promedio de apertura normalizadas y supone que dichas cuotas se encuentran disponibles en el instante al que se refiere el pronóstico. No se evaluó la rentabilidad económica de las predicciones. Por tanto, los resultados deben interpretarse exclusivamente como estimaciones probabilísticas obtenidas mediante un modelo de regresión de Poisson y no como evidencia de oportunidades de inversión o de rentabilidad en mercados de apuestas.
+
+Esta etapa del proyecto deja establecido un sistema reproducible de predicción y una referencia empírica para desarrollos posteriores. Las siguientes líneas de trabajo comprenden la consideración de modelos alternativos para la dependencia de goles y la actualización del entrenamiento cuando se disponga de nuevos periodos independientes de evaluación. Los resultados aquí expuestos corresponden únicamente a la versión y a los periodos efectivamente analizados.
+
+% ANEXO. DICCIONARIO DE VARIABLES
+
+\newpage
+\appendix
+\section{Diccionario de variables}
+
+Este anexo describe las variables contenidas en la base histórica
+consolidada y en el conjunto de datos utilizado para estimar y
+evaluar los modelos predictivos. Se distingue entre las estadísticas
+observadas en cada encuentro y los indicadores construidos con
+información disponible antes de su celebración.
+
+\newcommand{\campo}[1]{\texttt{\detokenize{#1}}}
+
+\subsection{Variables de la base histórica consolidada}
+
+La base histórica \campo{E0_consolidado.csv} contiene
+33 columnas. Cada observación corresponde a un partido de la
+Premier League.
+
+\subsubsection{Identificación y resultados del encuentro}
+
+\begin{tabularx}{\textwidth}{p{0.20\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{Date} &
+Fecha de celebración del partido. \\
+
+\campo{HomeTeam} &
+Nombre del equipo local. \\
+
+\campo{AwayTeam} &
+Nombre del equipo visitante. \\
+
+\campo{FTHG} &
+Goles anotados por el equipo local al finalizar el partido. \\
+
+\campo{FTAG} &
+Goles anotados por el equipo visitante al finalizar el partido. \\
+
+\campo{FTR} &
+Resultado final: H, victoria local; D, empate;
+A, victoria visitante. \\
+
+\campo{HTHG} &
+Goles anotados por el equipo local al finalizar el primer tiempo. \\
+
+\campo{HTAG} &
+Goles anotados por el equipo visitante al finalizar el primer tiempo. \\
+
+\campo{HTR} &
+Resultado al finalizar el primer tiempo: H, ventaja local;
+D, empate; A, ventaja visitante. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Tiros y tiros a puerta}
+
+\begin{tabularx}{\textwidth}{p{0.20\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{HS} &
+Número total de tiros realizados por el equipo local. \\
+
+\campo{AS} &
+Número total de tiros realizados por el equipo visitante. \\
+
+\campo{HST} &
+Número de tiros a puerta realizados por el equipo local. \\
+
+\campo{AST} &
+Número de tiros a puerta realizados por el equipo visitante. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Otras estadísticas del encuentro}
+
+\begin{tabularx}{\textwidth}{p{0.20\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{HC} &
+Número de saques de esquina obtenidos por el equipo local. \\
+
+\campo{AC} &
+Número de saques de esquina obtenidos por el equipo visitante. \\
+
+\campo{HF} &
+Número de faltas cometidas por el equipo local. \\
+
+\campo{AF} &
+Número de faltas cometidas por el equipo visitante. \\
+
+\campo{HY} &
+Número de tarjetas amarillas recibidas por el equipo local. \\
+
+\campo{AY} &
+Número de tarjetas amarillas recibidas por el equipo visitante. \\
+
+\campo{HR} &
+Número de tarjetas rojas recibidas por el equipo local. \\
+
+\campo{AR} &
+Número de tarjetas rojas recibidas por el equipo visitante. \\
+
+\campo{Referee} &
+Nombre del árbitro del encuentro. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Cuotas del mercado de apuestas}
+
+Las cuotas se expresan en formato decimal. En la nomenclatura
+1X2, H corresponde a la victoria local, D al empate y A a la
+victoria visitante.
+
+\begin{tabularx}{\textwidth}{p{0.20\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{B365H} &
+Cuota ofrecida por Bet365 para la victoria local. \\
+
+\campo{B365D} &
+Cuota ofrecida por Bet365 para el empate. \\
+
+\campo{B365A} &
+Cuota ofrecida por Bet365 para la victoria visitante. \\
+
+\campo{AvgH} &
+Cuota promedio de apertura del mercado para la victoria local. \\
+
+\campo{AvgD} &
+Cuota promedio de apertura del mercado para el empate. \\
+
+\campo{AvgA} &
+Cuota promedio de apertura del mercado para la victoria visitante. \\
+
+\campo{AvgCH} &
+Cuota promedio de cierre del mercado para la victoria local. \\
+
+\campo{AvgCD} &
+Cuota promedio de cierre del mercado para el empate. \\
+
+\campo{AvgCA} &
+Cuota promedio de cierre del mercado para la victoria visitante. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Goles esperados observados}
+
+\begin{tabularx}{\textwidth}{p{0.20\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{HxG} &
+Goles esperados (xG) generados por el equipo local
+durante el encuentro, según la fuente de datos. \\
+
+\campo{AxG} &
+Goles esperados (xG) generados por el equipo visitante
+durante el encuentro, según la fuente de datos. \\
+\bottomrule
+\end{tabularx}
+
+Las columnas anteriores describen información observada del
+encuentro o información del mercado. Las estadísticas del propio
+partido no se utilizaron como variables explicativas para
+pronosticarlo. En su lugar, se emplearon para construir indicadores
+históricos de los equipos con observaciones anteriores a la fecha
+de cada predicción.
+
+\subsection{Variables del conjunto de modelación}
+
+El DataFrame \campo{training_data}, que puede almacenarse en
+\campo{premier_training_data.csv}, contiene identificadores del
+partido, variables explicativas construidas antes del encuentro
+y los goles observados utilizados como variables objetivo.
+
+En los nombres de las variables, el sufijo \campo{home} se refiere
+al equipo local y \campo{away} al visitante. Los términos
+\campo{gf} y \campo{ga} corresponden, respectivamente, a goles
+a favor y goles en contra. El término \campo{sot} se refiere a
+tiros a puerta.
+
+\subsubsection{Identificación, clasificación Elo y variables objetivo}
+
+\begin{tabularx}{\textwidth}{p{0.29\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{Date} &
+Fecha del encuentro. \\
+
+\campo{HomeTeam} &
+Equipo local. \\
+
+\campo{AwayTeam} &
+Equipo visitante. \\
+
+\campo{elo_home} &
+Clasificación Elo del equipo local inmediatamente antes
+del encuentro. \\
+
+\campo{elo_away} &
+Clasificación Elo del equipo visitante inmediatamente antes
+del encuentro. \\
+
+\campo{elo_diff} &
+Diferencia entre el Elo del local y el del visitante:
+$\campo{elo\_home}-\campo{elo\_away}$.
+Para su incorporación a las regresiones, esta diferencia
+se divide entre 400. \\
+
+\campo{home_goals} &
+Goles efectivamente anotados por el equipo local.
+Variable objetivo de la regresión de goles locales. \\
+
+\campo{away_goals} &
+Goles efectivamente anotados por el equipo visitante.
+Variable objetivo de la regresión de goles visitantes. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Promedios de goles ajustados por temporada}
+
+Estas variables combinan los promedios de la temporada vigente,
+calculados con encuentros anteriores a la fecha de predicción,
+con una referencia histórica mediante un procedimiento de
+contracción o \textit{shrinkage}.
+
+\begin{tabularx}{\textwidth}{p{0.29\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{gf_home} &
+Promedio ajustado de goles anotados por el equipo local. \\
+
+\campo{ga_home} &
+Promedio ajustado de goles recibidos por el equipo local. \\
+
+\campo{gf_away} &
+Promedio ajustado de goles anotados por el equipo visitante. \\
+
+\campo{ga_away} &
+Promedio ajustado de goles recibidos por el equipo visitante. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Forma reciente}
+
+Las variables de forma reciente corresponden a promedios ponderados
+de los últimos diez partidos disponibles de cada equipo. Se
+consideran encuentros tanto de local como de visitante y se
+asigna mayor peso a los partidos más recientes mediante un
+factor de decaimiento de 0.85.
+
+\begin{tabularx}{\textwidth}{p{0.29\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{form_gf_home} &
+Promedio ponderado de goles anotados por el equipo local
+en sus últimos diez partidos. \\
+
+\campo{form_ga_home} &
+Promedio ponderado de goles recibidos por el equipo local
+en sus últimos diez partidos. \\
+
+\campo{form_gf_away} &
+Promedio ponderado de goles anotados por el equipo visitante
+en sus últimos diez partidos. \\
+
+\campo{form_ga_away} &
+Promedio ponderado de goles recibidos por el equipo visitante
+en sus últimos diez partidos. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Indicadores recientes de tiros}
+
+\begin{tabularx}{\textwidth}{p{0.29\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{shots_for_home} &
+Promedio ponderado de tiros realizados por el equipo local
+en sus últimos diez partidos. \\
+
+\campo{shots_against_home} &
+Promedio ponderado de tiros concedidos por el equipo local
+a sus rivales en sus últimos diez partidos. \\
+
+\campo{shots_for_away} &
+Promedio ponderado de tiros realizados por el equipo visitante
+en sus últimos diez partidos. \\
+
+\campo{shots_against_away} &
+Promedio ponderado de tiros concedidos por el equipo visitante
+a sus rivales en sus últimos diez partidos. \\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Indicadores recientes de tiros a puerta}
+
+\begin{tabularx}{\textwidth}{p{0.29\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{sot_for_home} &
+Promedio ponderado de tiros a puerta realizados por el equipo
+local en sus últimos diez partidos. \\
+
+\campo{sot_against_home} &
+Promedio ponderado de tiros a puerta concedidos por el equipo
+local a sus rivales en sus últimos diez partidos. \\
+
+\campo{sot_for_away} &
+Promedio ponderado de tiros a puerta realizados por el equipo
+visitante en sus últimos diez partidos. \\
+
+\campo{sot_against_away} &
+Promedio ponderado de tiros a puerta concedidos por el equipo
+visitante a sus rivales en sus últimos diez partidos. \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Variables obtenidas a partir de las predicciones}
+
+Además de las columnas de \campo{training_data}, durante la
+evaluación se generan las siguientes variables de salida.
+Estas no constituyen predictores adicionales de las regresiones,
+sino resultados derivados de sus estimaciones.
+
+\begin{tabularx}{\textwidth}{p{0.29\textwidth}X}
+\toprule
+Variable & Descripción \\
+\midrule
+\campo{lambda_home} &
+Media de goles estimada para el equipo local mediante su
+regresión de Poisson. \\
+
+\campo{lambda_away} &
+Media de goles estimada para el equipo visitante mediante
+su regresión de Poisson. \\
+
+\campo{P_home} &
+Probabilidad estimada de victoria local. \\
+
+\campo{P_draw} &
+Probabilidad estimada de empate. \\
+
+\campo{P_away} &
+Probabilidad estimada de victoria visitante. \\
+\bottomrule
+\end{tabularx}
+
+Las probabilidades \campo{P_home}, \campo{P_draw} y
+\campo{P_away} se obtienen a partir de las dos medias
+de Poisson bajo el supuesto de independencia condicional
+de los goles y satisfacen
+
+\[
+P_{\mathrm{home}}+P_{\mathrm{draw}}+
+P_{\mathrm{away}}=1.
+\]
+
+
+\end{document}
