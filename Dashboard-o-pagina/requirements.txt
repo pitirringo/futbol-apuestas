@@ -1,5 +1,4 @@
-# Mismas versiones con las que el equipo obtuvo los resultados (Python 3.10).
-# Fijarlas garantiza que el tablero reproduzca exactamente las cifras del notebook.
+
 pandas==2.2.3
 numpy==2.2.3
 scipy==1.15.2
