@@ -30,7 +30,7 @@ Dashboard-o-pagina/               tablero (Quarto + Python)
 .github/workflows/                publicación automática del tablero en GitHub Pages
 ```
 
-## Cómo reproducir
+## Reproducibilidad
 
 Requisitos: Python 3.10 y los paquetes de `Dashboard-o-pagina/requirements.txt`
 (pandas, numpy, scipy, statsmodels, scikit-learn, plotly, jupyter).
@@ -45,8 +45,7 @@ pip install -r Dashboard-o-pagina/requirements.txt
 está incluido en el repositorio.
 
 **Análisis.** Ejecutar `Codigo/proyecto_mod_8/Analisis.ipynb` desde su propia carpeta. Usa la caché
-`premier_training_data.csv`; para reconstruir las variables desde cero, cambiar
-`RECONSTRUIR_VARIABLES = True` (tarda alrededor de un minuto).
+`premier_training_data.csv`
 
 **Dashboard.** Requiere además [Quarto](https://quarto.org) 1.4 o superior:
 
@@ -54,16 +53,7 @@ está incluido en el repositorio.
 quarto render Dashboard-o-pagina
 ```
 
-El resultado queda en `Dashboard-o-pagina/_site/`. En cada `git push` a `main`, GitHub Actions lo
-reconstruye y lo publica automáticamente. Más detalles en
-[Dashboard-o-pagina/README.md](Dashboard-o-pagina/README.md).
 
-## Documentación
-
-- [Reporte técnico del modelo](Codigo/Documentacion/Modulo_8.pdf).
-- [Detalles técnicos del tablero](Dashboard-o-pagina/README.md): estructura, cómo reproducirlo y
-  cómo se publica.
-- Página **Datos y método** del tablero: datos, limpieza, variables, evaluación y limitaciones.
 
 ## Equipo
 
@@ -74,5 +64,4 @@ reconstruye y lo publica automáticamente. Más detalles en
 - Martínez Vega Eduardo
 - Zacateco Tello María Fernanda
 
-Datos: Football-Data.co.uk. Proyecto con fines exclusivamente académicos; no constituye recomendación
-de apuestas.
+Datos: Football-Data.co.uk. 
