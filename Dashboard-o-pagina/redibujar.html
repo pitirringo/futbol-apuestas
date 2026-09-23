@@ -1,12 +1,5 @@
 <script>
-// Plotly mide etiquetas y anotaciones cuando dibuja la gráfica. Si en ese momento la página o
-// pestaña del tablero todavía no tiene tamaño (está oculta), las mediciones salen en cero y las
-// etiquetas desaparecen o se salen de la tarjeta. El redimensionado normal no lo corrige.
-// Solución: volver a dibujar desde cero (Plotly.newPlot) cada gráfica cuando su contenedor
-// adquiere tamaño real (ResizeObserver), al cargar la página y al cambiar de página o pestaña.
-//
-// Ojo: como la página incluye require.js, Plotly se carga como módulo y queda en
-// window._Plotly en lugar de window.Plotly; por eso se buscan ambos.
+
 (function () {
   function plotly() { return window.Plotly || window._Plotly || null; }
 
