@@ -113,15 +113,15 @@ ESPECIFICACIONES = {
 MODELO_SIMULADOR = "M0_Base"
 
 NOMBRES = {
-    "Uniforme": "Azar (1/3 cada resultado)",
+    "Uniforme": "Azar · 1/3 por resultado",
     "Ingenua": "Referencia ingenua",
-    "M0_Base": "M0 · base (3 variables)",
-    "M1_Forma": "M1 · + forma reciente",
-    "M2_Tiros": "M2 · + tiros",
-    "M3_SOT": "M3 · + tiros a puerta",
-    "M4_Completo": "M4 · completo (9 variables)",
-    "Mercado_apertura": "Mercado · apertura",
-    "Mercado_cierre": "Mercado · cierre",
+    "M0_Base": "M0 · Base",
+    "M1_Forma": "M1 · + Forma",
+    "M2_Tiros": "M2 · + Tiros",
+    "M3_SOT": "M3 · + Tiros a puerta",
+    "M4_Completo": "M4 · Completo",
+    "Mercado_apertura": "Mercado · Apertura",
+    "Mercado_cierre": "Mercado · Cierre",
 }
 
 # Cifras publicadas en Analisis.ipynb (secciones 5, 7 y 8) y en el reporte técnico.
@@ -578,9 +578,13 @@ def efectos_estandarizados(modelo="M0_Base") -> pd.DataFrame:
     """
     train, _, _ = particiones()
     m = modelos_entrenados()[modelo]
-    etiquetas = {"elo_diff": "Diferencia de Elo (local − visitante)",
-                 "gf_home": "Goles a favor del local", "ga_away": "Goles en contra del visitante",
-                 "gf_away": "Goles a favor del visitante", "ga_home": "Goles en contra del local"}
+    etiquetas = {
+          "elo_diff": "Diferencia Elo",
+          "gf_home": "Goles a favor · local",
+          "ga_away": "Goles recibidos · visitante",
+          "gf_away": "Goles a favor · visitante",
+          "ga_home": "Goles recibidos · local",
+    }
     filas = []
     for lado, nombre_lado in [("home", "Goles del local"), ("away", "Goles del visitante")]:
         ajuste = m[lado]
