@@ -6,6 +6,13 @@ project:
 
 lang: es
 
+format:
+  dashboard:
+    theme:
+      - cosmo
+      - estilos.scss
+    include-after-body: theme-toggle.html
+
 execute:
   echo: false
   warning: false
