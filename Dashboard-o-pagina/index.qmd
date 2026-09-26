@@ -1,16 +1,25 @@
 ---
 title: "Premier League: estadística vs. mercado de apuestas"
 lang: es
+
 format:
   dashboard:
     orientation: rows
     scrolling: true
-    theme: [cosmo, estilos.scss]
-    include-after-body: redibujar.html
+
+    theme:
+      - cosmo
+      - estilos.scss
+
+    include-after-body:
+      - redibujar.html
+      - theme-toggle.html
+
     nav-buttons:
       - icon: github
         href: https://github.com/pitirringo/futbol-apuestas
         aria-label: Repositorio del proyecto en GitHub
+
 jupyter: python3
 ---
 
