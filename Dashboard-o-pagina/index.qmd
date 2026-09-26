@@ -13,7 +13,6 @@ format:
 
     include-after-body:
       - redibujar.html
-      - theme-toggle.html
 
     nav-buttons:
       - icon: github
