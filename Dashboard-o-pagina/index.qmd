@@ -166,7 +166,7 @@ gr.mostrar(gr.mejora_sobre_ingenua(met))
 
 ### Column {width=38%}
 
-::: {.card .lectura title="En cuatro ideas"}
+::: {.card .lectura title="Resumen"}
 1. **Las estadísticas sí anticipan resultados.** Con sólo 3 variables, el modelo acierta `{python} pct(acc('Prueba', 'M0_Base'))` de los partidos de prueba, contra `{python} pct(acc('Prueba', 'Ingenua'))` de apostar siempre por el local. La mejora es estadísticamente significativa.
 2. **El mercado sabe un poco más.** Sus cuotas pronostican mejor en validación y en prueba. Con ambos periodos juntos (`{python} f"{n_val + n_test:,}"` partidos) la diferencia es pequeña (`{python} f"{brecha_total:.3f}"` de LogLoss), pero real.
 3. **Más variables no es mejor.** Forma reciente y tiros ayudaron en validación, pero no en prueba. El modelo base M0 fue el más robusto.
