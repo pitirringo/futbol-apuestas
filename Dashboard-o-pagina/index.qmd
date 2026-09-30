@@ -121,7 +121,7 @@ p_empate_real = float((y_test == 1).mean())
 ::: {.card .pregunta}
 ¿Qué tan bien anticipan el resultado de un partido de la Premier League (victoria local, empate o victoria visitante) las estadísticas disponibles *antes* del encuentro, comparadas con las probabilidades implícitas en las cuotas de apuestas?
 Las estadísticas contienen información útil, pero el mercado, que además conoce alineaciones, lesiones y noticias, la aprovecha mejor. 
-Se confirma. El modelo se acerca mucho al mercado, sin superarlo.**
+Se confirma. El modelo se acerca mucho al mercado, sin superarlo.
 :::
 
 ## Row {height=185px}
