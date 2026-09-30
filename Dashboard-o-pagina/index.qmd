@@ -119,8 +119,9 @@ p_empate_real = float((y_test == 1).mean())
 ## Row {height=135px}
 
 ::: {.card .pregunta}
-**Pregunta.** ¿Qué tan bien anticipan el resultado de un partido de la Premier League (victoria local, empate o victoria visitante) las estadísticas disponibles *antes* del encuentro, comparadas con las probabilidades implícitas en las cuotas de apuestas?
-**Hipótesis:** las estadísticas contienen información útil, pero el mercado, que además conoce alineaciones, lesiones y noticias, la aprovecha mejor. **Respuesta corta: se confirma. El modelo se acerca mucho al mercado, sin superarlo.**
+¿Qué tan bien anticipan el resultado de un partido de la Premier League (victoria local, empate o victoria visitante) las estadísticas disponibles *antes* del encuentro, comparadas con las probabilidades implícitas en las cuotas de apuestas?
+Las estadísticas contienen información útil, pero el mercado, que además conoce alineaciones, lesiones y noticias, la aprovecha mejor. 
+Se confirma. El modelo se acerca mucho al mercado, sin superarlo.**
 :::
 
 ## Row {height=185px}
@@ -163,7 +164,7 @@ gr.mostrar(gr.mejora_sobre_ingenua(met))
 
 ### Column {width=38%}
 
-::: {.card .lectura title="Lectura en 20 segundos"}
+::: {.card .lectura title="Resumen"}
 1. **Las estadísticas sí anticipan resultados.** Con 3 variables previas al partido, el modelo acierta `{python} pct(acc('Prueba', 'M0_Base'))` de los partidos de prueba (contra `{python} pct(acc('Prueba', 'Ingenua'))` de apostar siempre por el local), y su mejora sobre la referencia ingenua es estadísticamente significativa.
 2. **El mercado sabe un poco más.** Las cuotas de apertura obtienen menor LogLoss en validación y en prueba. Con ambos periodos juntos (`{python} f"{n_val + n_test:,}"` partidos) la diferencia es pequeña (`{python} f"{brecha_total:.3f}"`) pero distinta de cero.
 3. **Más variables no es mejor.** Forma reciente y tiros ayudaron en validación y dejaron de ayudar en prueba: el modelo base M0 fue el más robusto.
