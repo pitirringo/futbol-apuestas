@@ -7,9 +7,9 @@ import pandas as pd
 ELO_INIT     = 1500
 ELO_SCALE    = 400
 
-# Valores de K por default, estas las tomamos por defecto al inicio del analisis
-ELO_K        = 30
-SHRINKAGE_K  = 10
+# Valores de K por default, estas las tomamos despues de realizar prueba log loss
+ELO_K        = 15
+SHRINKAGE_K  = 0
 
 
 # ── Carga de histórico ────────────────────────────────────────────────────────
