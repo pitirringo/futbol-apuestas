@@ -318,10 +318,10 @@ HTML(tabla_calibracion)
 ### Column {width=34%}
 
 ::: {.card title="En pocas palabras"}
-- **Dos regresiones de Poisson** estiman los goles esperados de cada equipo, sólo con información **anterior** al partido.
+- Dos regresiones de Poisson estiman los goles esperados de cada equipo, sólo con información anterior al partido.
 - De esos goles salen las probabilidades de cada marcador y de cada resultado.
 - Entrenamiento 2019/20–2023/24 (`{python} f"{n_train:,}"` partidos) · validación 2024/25 (`{python} n_val`) · prueba ago-2025 a sep-2026 (`{python} n_test`).
-- Las cuotas **nunca** entran al modelo: sólo sirven para comparar.
+- Las cuotas nunca entran al modelo: sólo sirven para comparar.
 :::
 
 ## Row {height=490px}
