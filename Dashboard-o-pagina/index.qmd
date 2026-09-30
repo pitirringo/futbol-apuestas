@@ -229,7 +229,6 @@ gr.mostrar(gr.resultado_favorito(fav))
 
 ::: {.card title="Qué significa para el modelo"}
 - **Predecir fútbol es difícil por naturaleza.** Si el favorito de las casas de apuestas gana sólo `{python} pct(fav['gana_favorito'], 0)` de las veces, un buen modelo debe aspirar a acertar cerca de 50 %, no 80 %. Por eso el tablero evalúa **probabilidades** (LogLoss) y no sólo aciertos.
-- **La localía es real y estable.** El local gana `{python} pct(g['pct_local'], 0)` de los partidos; el visitante, `{python} pct(g['pct_visita'], 0)`. El modelo la captura con dos ecuaciones: una para los goles del local y otra para los del visitante.
 - **La temporada sin público (2020/21) no explica la brecha.** Al reentrenar M0 sin esos `{python} sens['partidos_excluidos']` partidos, la probabilidad media de victoria local sube de `{python} pct(sens['original_test_p_local'])` a `{python} pct(sens['sin_publico_test_p_local'])`, pero el LogLoss de prueba no mejora (`{python} num(sens['original_test_logloss'], 4)` → `{python} num(sens['sin_publico_test_logloss'], 4)`).
 - **Dos temporadas incompletas.** 2003/04 y 2004/05 tienen 335 de 380 partidos. Sólo afectan al Elo histórico, que se estabiliza años antes del periodo de modelación.
 :::
@@ -277,9 +276,9 @@ gr.mostrar(gr.ajuste_poisson(d["poisson"]))
 ::: {.card title="Por qué importan estos patrones"}
 Cada patrón respalda una decisión del modelo:
 
-- **Elo → variable principal.** A mayor ventaja de Elo del local, más probable su victoria: de `{python} pct(e['pct_local'].iloc[0], 0)` en el decil más desfavorable a `{python} pct(e['pct_local'].iloc[-1], 0)` en el más favorable. Con Elo igual el local sigue siendo favorito, así que la localía debe entrar al modelo.
-- **Mercado calibrado → referencia exigente.** Si las cuotas ya aciertan en sus probabilidades, ganarles exige información que ellas no tengan. En los extremos aparece un leve sesgo favorito–sorpresa, conocido en la literatura.
-- **Goles tipo Poisson → regresión de Poisson.** La varianza apenas supera a la media. Dentro del modelo, la dispersión de Pearson es `{python} num(disp['home'], 2)` (local) y `{python} num(disp['away'], 2)` (visitante): muy cerca de 1, como supone Poisson.
+- **Elo → variable principal.** Mientras más fuerte es el local según el Elo, más gana: `{python} pct(e['pct_local'].iloc[0], 0)` de las veces cuando está en clara desventaja y `{python} pct(e['pct_local'].iloc[-1], 0)` cuando tiene clara ventaja. Incluso con fuerzas iguales, el local gana más, por eso el modelo toma en cuenta quién juega en casa.
+- **Mercado calibrado → rival difícil.** Las probabilidades de las cuotas coinciden con lo que de verdad pasa, así que para ganarles hace falta saber algo que el mercado no sepa. Sólo en los extremos se equivoca un poco: da algo de más a los equipos muy poco probables y algo de menos a los grandes favoritos, un sesgo conocido.
+- **Goles tipo Poisson → regresión de Poisson.** Los goles se reparten como predice una distribución de Poisson, y la variación que queda dentro del modelo es la esperada: `{python} num(disp['home'], 2)` en el local y `{python} num(disp['away'], 2)` en el visitante, cuando lo ideal es 1.
 :::
 
 ::: {.card title="Tabla: resultado por diferencia de Elo"}
