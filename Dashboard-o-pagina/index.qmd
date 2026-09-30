@@ -141,7 +141,7 @@ Partidos acertados por el modelo
 
 `{python} pct(acc('Prueba', 'M0_Base'))`
 
-Mercado: `{python} pct(acc('Prueba', 'Mercado_apertura'))` · "siempre gana el local": `{python} pct(acc('Prueba', 'Ingenua'))` (prueba)
+Mercado: `{python} pct(acc('Prueba', 'Mercado_apertura'))` · Referencia ingenua: `{python} pct(acc('Prueba', 'Ingenua'))` 
 :::
 
 ::: {.valuebox icon="sliders" color="#f3f2ee"}
@@ -149,7 +149,7 @@ Variables en el mejor modelo
 
 3
 
-Elo y goles ajustados. Agregar forma y tiros no mejoró la prueba
+Elo y goles ajustados.
 :::
 
 ## Row {height=590px}
