@@ -119,7 +119,7 @@ p_empate_real = float((y_test == 1).mean())
 ## Row {height=180px}
 
 ::: {.card .pregunta}
-**Pregunta.** ¿Qué tan bien anticipan el resultado de un partido de la Premier League (gana el local, empate o gana el visitante) las estadísticas disponibles *antes* del encuentro, frente a las probabilidades implícitas en las cuotas de apuestas?
+**Pregunta.** ¿Qué tan bien anticipan el resultado de un partido de la Premier League (gana el local, empate o gana el visitante) las estadísticas disponibles antes del encuentro, frente a las probabilidades implícitas en las cuotas de apuestas?
 
 **Hipótesis.** Las estadísticas sí contienen información útil, pero el mercado, que además conoce alineaciones, lesiones y noticias, la aprovecha mejor.
 
@@ -133,7 +133,7 @@ Ventaja del mercado que alcanza el modelo
 
 `{python} pct(d['fraccion_mejora'], 0)`
 
-Mejora del modelo ÷ mejora del mercado, ambas frente a la referencia ingenua (prueba)
+De cada 100 puntos que el mercado mejora sobre un pronóstico básico, el modelo logra `{python} f"{d['fraccion_mejora'] * 100:.0f}"`
 :::
 
 ::: {.valuebox icon="check2-circle" color="#eef5fd"}
