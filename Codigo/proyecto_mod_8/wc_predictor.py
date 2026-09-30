@@ -6,7 +6,7 @@ import pandas as pd
 N_SIMS       = 30_000
 AVG_WC_GOALS = 1.3619  #(2.52 sobre 2, el primedio histórico de goles por partido)
 ELO_INIT     = 1500
-ELO_K        = 30
+ELO_K        = 15
 
 HIST_URL = 'https://raw.githubusercontent.com/martj42/international_results/master/results.csv'
 
@@ -248,7 +248,8 @@ def recent_form(df, team, n=10, decay=0.85):
         )
     }
 
-def season_stats(df, team, as_of_date, k=10):
+                                       #Ojo, este se cambió porque es el de menor log-loss, i.e. aquel que no toma valores anteriores 
+def season_stats(df, team, as_of_date, k=0):
     """
     Calcula los goles promedio a favor y en contra
     de un equipo utilizando shrinkage.
