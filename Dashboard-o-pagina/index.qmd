@@ -123,7 +123,7 @@ p_empate_real = float((y_test == 1).mean())
 
 **Hipótesis.** Las estadísticas sí contienen información útil, pero el mercado, que además conoce alineaciones, lesiones y noticias, la aprovecha mejor.
 
-**Resultado: se confirma.** El modelo se acerca mucho al mercado, pero no lo supera.
+**Resultado: ** El modelo se acerca mucho al mercado, pero no lo supera.
 :::
 
 ## Row {height=185px}
