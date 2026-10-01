@@ -149,7 +149,7 @@ Variables en el mejor modelo
 
 3
 
-Elo y goles ajustados.
+Elo y goles de la temporada.
 :::
 
 ## Row {height=590px}
