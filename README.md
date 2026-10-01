@@ -25,7 +25,7 @@ Las cifras exactas están en el tablero, que las recalcula desde el código cada
 
 - **Dashboard:** https://pitirringo.github.io/futbol-apuestas/
 - **Repositorio:** https://github.com/pitirringo/futbol-apuestas
-- **Reporte:** _lo entrega el equipo de Reporte_
+- **Reporte:** Se anexa en el repositorio bajo el nombre "Reporte.pdf"
 
 ## Estructura
 
