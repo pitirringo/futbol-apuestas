@@ -673,8 +673,9 @@ def sensibilidad_sin_publico() -> dict:
     entrenamiento, explica la brecha con el mercado. No sustituye al modelo del equipo.
     """
     train, val, test = particiones()
-    cerrado = (train["Date"] >= "2020-06-17") & (train["Date"] <= "2021-05-23")
-    salida = {"partidos_excluidos": int(cerrado.sum())}
+    inicio, fin = pd.Timestamp("2020-06-17"), pd.Timestamp("2021-05-23")
+    cerrado = (train["Date"] >= inicio) & (train["Date"] <= fin)
+    salida = {"partidos_excluidos": int(cerrado.sum()), "inicio": inicio, "fin": fin}
     for etiqueta, datos in [("original", train), ("sin_publico", train[~cerrado])]:
         m = entrenar_modelo(datos, *ESPECIFICACIONES["M0_Base"])
         for conjunto, d in [("val", val), ("test", test)]:

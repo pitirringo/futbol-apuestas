@@ -205,7 +205,7 @@ gr.mostrar(gr.mejora_sobre_ingenua(met))
 
 ::: {.card .lectura title="Resumen"}
 1. **Las estadísticas sí anticipan resultados.** Con sólo `{python} n_var_m0` variables, el modelo acierta `{python} pct(acc('Prueba', 'M0_Base'))` de los partidos de prueba, contra `{python} pct(acc('Prueba', 'Ingenua'))` de un pronóstico básico. La mejora es estadísticamente significativa.
-2. **El mercado sabe un poco más.** Sus cuotas pronostican mejor en validación y en prueba. La diferencia es pequeña (`{python} f"{brecha_total:.3f}"` de LogLoss), pero real.
+2. **El mercado sabe un poco más.** Sus cuotas pronostican mejor en validación y en prueba. La diferencia es pequeña (`{python} f"{brecha_total:.3f}"` de LogLoss con validación y prueba juntas), pero real.
 3. **Más variables no es mejor.** Otros modelos con más variables como Forma reciente y tiros ayudaron en validación, pero no en prueba. El modelo base M0 fue el más robusto.
 4. **Conclusión.** Las cuotas del mercado ya incorporan la estadística pública, y algo más. Nuestro modelo simple y transparente se acerca, pero no le gana al mercado de forma sistemática.
 
@@ -233,7 +233,9 @@ Gana el equipo local
 
 Empate `{python} pct(g['pct_empate'])` 
 
-Visitante `{python} pct(g['pct_visita'])` 
+Visitante `{python} pct(g['pct_visita'])`
+
+(`{python} tc['n']` temporadas completas)
 :::
 
 ::: {.valuebox icon="trophy" color="#fdf0ea"}
@@ -270,7 +272,7 @@ gr.mostrar(gr.resultado_favorito(fav))
 
 ::: {.card title="Qué significa para el modelo"}
 - **Predecir fútbol es difícil por naturaleza.** Si el favorito de las casas de apuestas gana sólo `{python} pct(fav['gana_favorito'], 0)` de las veces, un buen modelo debe aspirar a acertar cerca de 50 %. Por eso el tablero evalúa probabilidades y no sólo aciertos.
-- **El COVID-19 no tiene un impacto drástico en el modelo.** Al reentrenar M0 sin esos `{python} sens['partidos_excluidos']` partidos, la probabilidad media de victoria local sube de `{python} pct(sens['original_test_p_local'])` a `{python} pct(sens['sin_publico_test_p_local'])`, pero el LogLoss de prueba casi no cambia (`{python} num(sens['original_test_logloss'], 4)` → `{python} num(sens['sin_publico_test_logloss'], 4)`), mientras que la brecha con el mercado es de `{python} num(ll('Prueba', 'M0_Base') - ll('Prueba', 'Mercado_apertura'), 3)`.
+- **El COVID-19 no tiene un impacto drástico en el modelo.** Al reentrenar M0 sin los `{python} sens['partidos_excluidos']` partidos jugados sin público (del `{python} fecha_es(sens['inicio'])` al `{python} fecha_es(sens['fin'])`), la probabilidad media de victoria local sube de `{python} pct(sens['original_test_p_local'])` a `{python} pct(sens['sin_publico_test_p_local'])`, pero el LogLoss de prueba casi no cambia (`{python} num(sens['original_test_logloss'], 4)` → `{python} num(sens['sin_publico_test_logloss'], 4)`), mientras que la brecha con el mercado es de `{python} num(ll('Prueba', 'M0_Base') - ll('Prueba', 'Mercado_apertura'), 3)`.
 
 :::
 

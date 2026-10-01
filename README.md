@@ -31,15 +31,15 @@ Las cifras exactas están en el tablero, que las recalcula desde el código cada
 
 ```text
 Codigo/
-├── proyecto_mod_8/
-│   ├── Limpieza de datos.ipynb   consolidación de los CSV de Football-Data
-│   ├── E0_consolidado.csv        base consolidada: un partido por fila, de 2001/02 a la fecha
-│   ├── wc_predictor.py           Elo, forma reciente y goles de la temporada (K y k calibrados)
-│   ├── premier_training_data.csv variables previas al partido (2019/20 en adelante)
-│   └── Analisis.ipynb            calibración de K y k, modelos de Poisson M0–M4, validación, prueba y mercado
-└── Documentacion/                reporte técnico del modelo (LaTeX y PDF)
+└── proyecto_mod_8/
+    ├── Limpieza de datos.ipynb   consolidación de los CSV de Football-Data
+    ├── E0_consolidado.csv        base consolidada: un partido por fila, de 2001/02 a la fecha
+    ├── wc_predictor.py           Elo, forma reciente y goles de la temporada (K y k calibrados)
+    ├── premier_training_data.csv variables previas al partido (2019/20 en adelante)
+    └── Analisis.ipynb            calibración de K y k, modelos de Poisson M0–M4, validación, prueba y mercado
 Dashboard-o-pagina/               tablero (Quarto + Python)
 .github/workflows/                publicación automática del tablero en GitHub Pages
+Reporte.pdf                       reporte técnico del proyecto
 ```
 
 ### Cómo se conectan las partes
@@ -60,12 +60,12 @@ premier_training_data.csv   2,696 partidos, del 09/08/2019 al 14/09/2026
 Dashboard-o-pagina/_site/index.html   el tablero que se publica en GitHub Pages
 ```
 
-Aparte, `Codigo/Documentacion/main.tex` genera `Modulo_8.pdf`, el reporte técnico.
+Aparte, el reporte técnico está en `Reporte.pdf`, en la raíz del repositorio.
 
 ## Reproducibilidad
 
 Esta sección explica cómo obtener los mismos resultados que presentamos en el proyecto: la base de
-datos, los modelos, las cifras, el tablero y el reporte.
+datos, los modelos, las cifras y el tablero.
 
 Para asegurarnos de que las instrucciones funcionan, repetimos todo el proceso desde cero el 30 de
 septiembre de 2026, en Linux, con Python 3.10.20 y Quarto 1.8.25, a partir del commit `16c9e4b`. El
