@@ -287,7 +287,7 @@ HTML(tabla_temporadas)
 ### Column {width=58%}
 
 ::: {.card title="A más ventaja de Elo, más victorias locales"}
-<p class="subtitulo">Resultados según la diferencia de Elo antes del partido, en deciles (2019/20 a 2026/27, `{python} f"{int(e['partidos'].sum()):,}"` partidos). Es la variable con más peso en el modelo. Jugar en casa equivale a ≈`{python} f"{ventaja_elo:.0f}"` puntos de Elo.</p>
+<p class="subtitulo">Resultados según la diferencia de Elo antes del partido, en deciles (2019/20 a 2026/27, `{python} f"{int(e['partidos'].sum()):,}"` partidos).</p>
 
 ```{python}
 gr.mostrar(gr.resultado_por_diferencia_elo(d["elo"], d["ventaja_elo"]))
@@ -297,7 +297,7 @@ gr.mostrar(gr.resultado_por_diferencia_elo(d["elo"], d["ventaja_elo"]))
 ### Column {width=42%}
 
 ::: {.card title="Las cuotas están bien calibradas"}
-<p class="subtitulo">Cuando las cuotas de Bet365 dicen 70 %, ocurre ≈70 % de las veces (`{python} f"{int(c['n'].sum()):,}"` pronósticos de `{python} f"{fav['partidos']:,}"` partidos). Por eso el mercado es un rival exigente.</p>
+<p class="subtitulo">Cuando las cuotas de Bet365 dicen 70 %, ocurre ≈70 % de las veces.</p>
 
 ```{python}
 gr.mostrar(gr.calibracion_mercado(d["calibracion_mercado"]))
@@ -307,7 +307,7 @@ gr.mostrar(gr.calibracion_mercado(d["calibracion_mercado"]))
 ## Row {.tabset height=480px}
 
 ::: {.card title="Los goles se comportan como un conteo de Poisson"}
-<p class="subtitulo">Goles por partido observados contra una distribución de Poisson con la misma media (`{python} tc['n']` temporadas completas). El buen ajuste justifica usar regresión de Poisson.<br><span class="leyenda"><i class="muestra" style="background:#898781"></i>observado</span><span class="leyenda"><i class="muestra rombo" style="background:#2a78d6"></i>Poisson con la misma media</span></p>
+<p class="subtitulo">Goles por partido observados contra una distribución de Poisson con la misma media.<br><span class="leyenda"><i class="muestra" style="background:#898781"></i>observado</span><span class="leyenda"><i class="muestra rombo" style="background:#2a78d6"></i>Poisson con la misma media</span></p>
 
 ```{python}
 gr.mostrar(gr.ajuste_poisson(d["poisson"]))
@@ -315,11 +315,19 @@ gr.mostrar(gr.ajuste_poisson(d["poisson"]))
 :::
 
 ::: {.card title="Por qué importan estos patrones"}
-Cada patrón respalda una decisión del modelo:
+Cada patrón se traduce a una decisión del modelo:
 
-- **Elo → variable principal.** Mientras más fuerte es el local según el Elo, más gana: `{python} pct(e['pct_local'].iloc[0], 0)` de las veces cuando está en clara desventaja y `{python} pct(e['pct_local'].iloc[-1], 0)` cuando tiene clara ventaja. Incluso con fuerzas iguales, el local gana más, por eso el modelo toma en cuenta quién juega en casa.
-- **Mercado calibrado → rival difícil.** Las probabilidades de las cuotas coinciden con lo que de verdad pasa, así que para ganarles hace falta saber algo que el mercado no sepa. Sólo en los extremos se equivoca un poco: da algo de más a los equipos muy poco probables y algo de menos a los grandes favoritos, un sesgo conocido.
-- **Goles tipo Poisson → regresión de Poisson.** Los goles se reparten como predice una distribución de Poisson, y la variación que queda dentro del modelo es la esperada: `{python} num(disp['home'], 2)` en el local y `{python} num(disp['away'], 2)` en el visitante, cuando lo ideal es 1.
+- **Elo como variable principal.** 
+
+Mientras más fuerte es el local según el Elo, más gana, `{python} pct(e['pct_local'].iloc[0], 0)` de las veces cuando está en clara desventaja y `{python} pct(e['pct_local'].iloc[-1], 0)` cuando tiene clara ventaja. Incluso con fuerzas iguales, el local gana más, por eso el modelo toma en cuenta quién juega en casa.
+
+- **Mercado calibrado como rival difícil.** 
+
+Las probabilidades de las cuotas coinciden con lo que de verdad pasa, así que para ganarles hace falta saber algo que el mercado no sepa. Sólo en los extremos se equivoca un poco, da algo de más a los equipos muy poco probables y algo de menos a los grandes favoritos.
+
+- **Goles tipo Poisson - regresión de Poisson.** 
+
+Los goles se reparten como predice una distribución de Poisson, y la variación que queda dentro del modelo es la esperada, `{python} num(disp['home'], 2)` en el local y `{python} num(disp['away'], 2)` en el visitante.
 :::
 
 ::: {.card title="Tabla: resultado por diferencia de Elo"}
