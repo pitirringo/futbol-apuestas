@@ -3,6 +3,17 @@
 Proyecto final del **Módulo 8 (Comunicación de resultados)** del Diplomado de Introducción Analítica
 a la Ciencia de Datos.
 
+## Equipo
+
+- Castillo Rodríguez Daniel Arturo
+- Castillo Santiago Erika Isabel
+- Garduño Gutiérrez César Emiliano
+- Gómez Mendoza Maximiliano
+- Martínez Vega Eduardo
+- Zacateco Tello María Fernanda
+
+Datos: [Football-Data.co.uk](https://football-data.co.uk/englandm.php).
+
 **Pregunta de investigación:** ¿Qué tan bien anticipan el resultado de un partido de la Premier League
 (victoria local, empate o victoria visitante) las estadísticas disponibles antes del encuentro,
 comparadas con las probabilidades implícitas en las cuotas de apuestas?
@@ -397,13 +408,4 @@ En este proyecto nos apoyamos en herramientas de inteligencia artificial para ta
 código, redactar documentación y verificar la reproducibilidad. Todo el contenido fue revisado por el
 equipo, que es responsable del análisis, los resultados y las conclusiones.
 
-## Equipo
 
-- Castillo Rodríguez Daniel Arturo
-- Castillo Santiago Erika Isabel
-- Garduño Gutiérrez César Emiliano
-- Gómez Mendoza Maximiliano
-- Martínez Vega Eduardo
-- Zacateco Tello María Fernanda
-
-Datos: [Football-Data.co.uk](https://football-data.co.uk/englandm.php).
