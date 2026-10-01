@@ -367,18 +367,18 @@ HTML(tabla_calibracion)
 ### Column {width=34%}
 
 ::: {.card title="En pocas palabras"}
-- Dos regresiones de Poisson estiman los goles esperados de cada equipo, sólo con información anterior al partido.
+- Dos regresiones de Poisson estiman los goles esperados de cada equipo, con información anterior al partido.
 - De esos goles salen las probabilidades de cada marcador y de cada resultado.
 - Entrenamiento 2019/20–2023/24 (`{python} f"{n_train:,}"` partidos) · validación 2024/25 (`{python} n_val`) · prueba ago-2025 a sep-2026 (`{python} n_test`).
-- Las cuotas nunca entran al modelo: sólo sirven para comparar.
+- Las cuotas nunca entran al modelo, sólo sirven para comparar.
 :::
 
 ## Row {height=490px}
 
 ### Column {width=52%}
 
-::: {.card title="Agregar variables no generaliza; el mercado gana en ambos periodos"}
-<p class="subtitulo">Diferencia de LogLoss de cada especificación frente al modelo base M0. A la izquierda de la línea = mejor que M0.<br><span class="leyenda"><i class="muestra circulo hueco"></i>validación 2024/25</span><span class="leyenda"><i class="muestra circulo" style="background:#52514e"></i>prueba</span><span class="leyenda"><i class="muestra" style="background:#eb6834"></i>mercado</span><span class="leyenda"><i class="muestra" style="background:#898781"></i>especificaciones del modelo</span></p>
+::: {.card title="Agregar variables no generaliza"}
+<p class="subtitulo">Comparativa de LogLoss entre modelos.<br><span class="leyenda"><i class="muestra circulo hueco"></i>Validación</span><span class="leyenda"><i class="muestra circulo" style="background:#52514e"></i>Prueba</span><span class="leyenda"><i class="muestra" style="background:#eb6834"></i>Mercado</span><span class="leyenda"><i class="muestra" style="background:#898781"></i>Especificaciones del modelo</span></p>
 
 ```{python}
 gr.mostrar(gr.delta_vs_m0(d["delta_m0"]))
@@ -387,8 +387,8 @@ gr.mostrar(gr.delta_vs_m0(d["delta_m0"]))
 
 ### Column {width=48%}
 
-::: {.card title="El mercado gana en locales y empates; el modelo, en visitantes"}
-<p class="subtitulo">De dónde viene la diferencia de LogLoss entre M0 y el mercado, según el resultado (validación + prueba, `{python} brecha.attrs['partidos']` partidos; total `{python} f"{brecha.attrs['brecha_total']:+.3f}"`).</p>
+::: {.card title="No es una derrota..."}
+<p class="subtitulo">Diferencia de LogLoss entre M0 y el mercado, según el resultado.</p>
 
 ```{python}
 gr.mostrar(gr.brecha_por_resultado(brecha))
@@ -398,7 +398,7 @@ gr.mostrar(gr.brecha_por_resultado(brecha))
 ## Row {.tabset height=530px}
 
 ::: {.card title="Qué variables pesan más"}
-<p class="subtitulo">Efecto sobre los goles esperados de subir una desviación estándar cada variable de M0, con intervalo de 95 %. La diferencia de Elo domina en ambas ecuaciones. Los goles en contra del rival pesan poco: no son significativos en la ecuación del visitante (p = `{python} f"{p_ga_visita:.3g}"`) y quedan en el límite en la del local (p = `{python} f"{p_ga_local:.3g}"`).</p>
+<p class="subtitulo">Efecto sobre los goles esperados de subir una desviación estándar cada variable de M0, con intervalo de 95 %. La diferencia de Elo domina en ambas ecuaciones. Los goles en contra del rival pesan poco, no son significativos en la ecuación del visitante (p = `{python} f"{p_ga_visita:.3g}"`) y quedan en el límite en la del local (p = `{python} f"{p_ga_local:.3g}"`).</p>
 
 ```{python}
 gr.mostrar(gr.efectos(d["efectos"]))
@@ -422,7 +422,7 @@ gr.mostrar(gr.modelo_vs_mercado(d["partido_a_partido"]))
 :::
 
 ::: {.card title="Métricas completas"}
-<p class="subtitulo">LogLoss (métrica principal), probabilidad media asignada al resultado real, aciertos y error absoluto medio de goles. Las cifras de LogLoss coinciden con las del notebook del equipo.</p>
+<p class="subtitulo">LogLoss, probabilidad media asignada al resultado real, aciertos y error absoluto medio de goles.</p>
 
 ```{python}
 HTML(tabla_metricas)
@@ -430,13 +430,13 @@ HTML(tabla_metricas)
 :::
 
 ::: {.card title="¿Son significativas las diferencias?"}
-<p class="subtitulo">Intervalos bootstrap con 10,000 remuestreos de partidos. Si el intervalo no incluye el cero, la diferencia no se explica por azar. Diferencia negativa = A fue mejor que B.</p>
+<p class="subtitulo">Intervalos bootstrap con 10,000 remuestreos de partidos. Si el intervalo no incluye el cero, la diferencia no se explica por azar.</p>
 
 ```{python}
 HTML(tabla_bootstrap)
 ```
 
-<p class="nota"><b>Lectura.</b> El modelo supera con claridad a la referencia ingenua: `{python} ic('Prueba', 'M0_Base', 'Ingenua')`. Frente al mercado, la prueba sola no es concluyente, `{python} ic('Prueba', 'M0_Base', 'Mercado_apertura')`; con validación y prueba juntas, sí: `{python} ic('Validación + prueba', 'M0_Base', 'Mercado_apertura')`. Entre M4 y M0, en validación M4 fue mejor por un margen mínimo, `{python} ic('Validación', 'M4_Completo', 'M0_Base')`; en prueba la diferencia no es concluyente, `{python} ic('Prueba', 'M4_Completo', 'M0_Base')`.</p>
+<p class="nota"><b>Lectura.</b> El modelo supera con claridad a la referencia ingenua. Frente al mercado, la prueba sola no es concluyente; con validación y prueba juntas, sí. Entre M4 y M0, en validación M4 fue mejor por un margen mínimo; en prueba la diferencia no es concluyente.</p>
 :::
 
 # Explora un partido {#simulador}
