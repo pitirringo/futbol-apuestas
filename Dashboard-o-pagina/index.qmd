@@ -221,7 +221,9 @@ Partidos analizados
 
 `{python} f"{g['partidos']:,}"`
 
-`{python} g['temporadas']` temporadas, del 18 de agosto de 2001 al `{python} ultima_fecha`
+`{python} g['temporadas']` temporadas.
+
+Del 18 de agosto de 2001 al `{python} ultima_fecha`
 :::
 
 ::: {.valuebox icon="house-door" color="#eef7ee"}
@@ -229,7 +231,9 @@ Gana el equipo local
 
 `{python} pct(g['pct_local'])`
 
-Empate `{python} pct(g['pct_empate'])` · visitante `{python} pct(g['pct_visita'])` (`{python} tc['n']` temporadas completas)
+Empate `{python} pct(g['pct_empate'])` 
+
+Visitante `{python} pct(g['pct_visita'])` 
 :::
 
 ::: {.valuebox icon="trophy" color="#fdf0ea"}
@@ -237,7 +241,7 @@ Gana el favorito de las cuotas
 
 `{python} pct(fav['gana_favorito'])`
 
-Casi la mitad de las veces, el favorito no gana (Bet365, `{python} fav['temporada_min']` a 2026/27)
+Casi la mitad de las veces, el favorito no gana (Bet365)
 :::
 
 ## Row {height=500px}
@@ -245,7 +249,7 @@ Casi la mitad de las veces, el favorito no gana (Bet365, `{python} fav['temporad
 ### Column {width=64%}
 
 ::: {.card title="Jugar en casa siempre ayuda… salvo sin público"}
-<p class="subtitulo">Reparto de resultados en cada temporada completa. Las bandas grises marcan los periodos que usa el modelo.</p>
+<p class="subtitulo">Las bandas grises marcan los periodos que usa el modelo.</p>
 
 ```{python}
 gr.mostrar(gr.resultados_por_temporada(d["temporadas"]))
@@ -255,7 +259,7 @@ gr.mostrar(gr.resultados_por_temporada(d["temporadas"]))
 ### Column {width=36%}
 
 ::: {.card title="Ni el favorito es garantía"}
-<p class="subtitulo">Resultado según el favorito de Bet365 (la cuota más baja entre local y visitante). El empate nunca es favorito, aunque ocurre en uno de cada cuatro partidos.</p>
+<p class="subtitulo">Resultado según el favorito de Bet365.</p>
 
 ```{python}
 gr.mostrar(gr.resultado_favorito(fav))
@@ -265,9 +269,9 @@ gr.mostrar(gr.resultado_favorito(fav))
 ## Row {.tabset height=440px}
 
 ::: {.card title="Qué significa para el modelo"}
-- **Predecir fútbol es difícil por naturaleza.** Si el favorito de las casas de apuestas gana sólo `{python} pct(fav['gana_favorito'], 0)` de las veces, un buen modelo debe aspirar a acertar cerca de 50 %, no 80 %. Por eso el tablero evalúa **probabilidades** (LogLoss) y no sólo aciertos.
-- **La temporada sin público (2020/21) no explica la brecha.** Al reentrenar M0 sin esos `{python} sens['partidos_excluidos']` partidos, la probabilidad media de victoria local sube de `{python} pct(sens['original_test_p_local'])` a `{python} pct(sens['sin_publico_test_p_local'])`, pero el LogLoss de prueba casi no cambia (`{python} num(sens['original_test_logloss'], 4)` → `{python} num(sens['sin_publico_test_logloss'], 4)`), mientras que la brecha con el mercado es de `{python} num(ll('Prueba', 'M0_Base') - ll('Prueba', 'Mercado_apertura'), 3)`.
-- **Base completa.** Una primera lectura de los archivos descartaba 90 partidos de 2003/04 y 2004/05 por renglones con formato irregular. La limpieza final los recupera: las `{python} tc['n']` temporadas completas tienen `{python} partidos_temporada`.
+- **Predecir fútbol es difícil por naturaleza.** Si el favorito de las casas de apuestas gana sólo `{python} pct(fav['gana_favorito'], 0)` de las veces, un buen modelo debe aspirar a acertar cerca de 50 %. Por eso el tablero evalúa probabilidades y no sólo aciertos.
+- **El COVID-19 no tiene un impacto drástico en el modelo.** Al reentrenar M0 sin esos `{python} sens['partidos_excluidos']` partidos, la probabilidad media de victoria local sube de `{python} pct(sens['original_test_p_local'])` a `{python} pct(sens['sin_publico_test_p_local'])`, pero el LogLoss de prueba casi no cambia (`{python} num(sens['original_test_logloss'], 4)` → `{python} num(sens['sin_publico_test_logloss'], 4)`), mientras que la brecha con el mercado es de `{python} num(ll('Prueba', 'M0_Base') - ll('Prueba', 'Mercado_apertura'), 3)`.
+
 :::
 
 ::: {.card title="Tabla por temporada"}
