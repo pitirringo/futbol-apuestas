@@ -156,7 +156,7 @@ p_empate_real = float((y_test == 1).mean())
 ::: {.card .pregunta}
 **Pregunta.** ¿Qué tan bien anticipan el resultado de un partido de la Premier League (gana el local, empate o gana el visitante) las estadísticas disponibles antes del encuentro, frente a las probabilidades implícitas en las cuotas de apuestas?
 
-**Hipótesis.** Las estadísticas sí contienen información útil, pero el mercado, que además conoce alineaciones, lesiones y noticias, la aprovecha mejor.
+**Hipótesis.** Las estadísticas sí contienen información útil, pero el mercado, que además tiene información ventajosa, la aprovecha mejor.
 
 **Resultado: ** El modelo se acerca mucho al mercado, pero no lo supera.
 :::
@@ -168,7 +168,7 @@ Ventaja del mercado que alcanza el modelo
 
 `{python} pct(d['fraccion_mejora'], 0)`
 
-De cada 100 puntos que el mercado mejora sobre un pronóstico básico, el modelo logra `{python} f"{d['fraccion_mejora'] * 100:.0f}"`
+De cada 100 puntos que el mercado mejora sobre una referencia ingenua, el modelo logra `{python} f"{d['fraccion_mejora'] * 100:.0f}"`
 :::
 
 ::: {.valuebox icon="check2-circle" color="#eef5fd"}
@@ -186,7 +186,7 @@ Variables en el mejor modelo
 
 3
 
-Elo y goles de la temporada.
+Elo y goles a favor y en contra de la temporada.
 :::
 
 ## Row {height=590px}
@@ -194,7 +194,7 @@ Elo y goles de la temporada.
 ### Column {width=62%}
 
 ::: {.card title="El modelo recupera la mayor parte de la ventaja del mercado, sin superarlo"}
-<p class="subtitulo">Cuánto mejora cada predictor frente a una referencia ingenua que sólo conoce la frecuencia histórica de goles. Barra más larga = mejor pronóstico.<br><span class="leyenda"><i class="muestra" style="background:#898781;opacity:.4"></i>validación 2024/25</span><span class="leyenda"><i class="muestra" style="background:#898781"></i>prueba, ago-2025 a sep-2026</span></p>
+<p class="subtitulo">Cuánto mejora cada predictor frente a una referencia ingenua. <br><span class="leyenda"><i class="muestra" style="background:#898781;opacity:.4"></i>Validación</span><span class="leyenda"><i class="muestra" style="background:#898781"></i>Prueba</span></p>
 
 ```{python}
 gr.mostrar(gr.mejora_sobre_ingenua(met))
@@ -204,10 +204,10 @@ gr.mostrar(gr.mejora_sobre_ingenua(met))
 ### Column {width=38%}
 
 ::: {.card .lectura title="Resumen"}
-1. **Las estadísticas sí anticipan resultados.** Con sólo `{python} n_var_m0` variables, el modelo acierta `{python} pct(acc('Prueba', 'M0_Base'))` de los partidos de prueba, contra `{python} pct(acc('Prueba', 'Ingenua'))` de apostar siempre por el local. La mejora es estadísticamente significativa.
-2. **El mercado sabe un poco más.** Sus cuotas pronostican mejor en validación y en prueba. Con ambos periodos juntos (`{python} f"{n_val + n_test:,}"` partidos) la diferencia es pequeña (`{python} f"{brecha_total:.3f}"` de LogLoss), pero real.
-3. **Más variables no es mejor.** Forma reciente y tiros ayudaron en validación, pero no en prueba. El modelo base M0 fue el más robusto.
-4. **Conclusión.** Las cuotas ya incorporan la estadística pública, y algo más. Un modelo simple y transparente se acerca, pero no le gana al mercado de forma sistemática.
+1. **Las estadísticas sí anticipan resultados.** Con sólo `{python} n_var_m0` variables, el modelo acierta `{python} pct(acc('Prueba', 'M0_Base'))` de los partidos de prueba, contra `{python} pct(acc('Prueba', 'Ingenua'))` de un pronóstico básico. La mejora es estadísticamente significativa.
+2. **El mercado sabe un poco más.** Sus cuotas pronostican mejor en validación y en prueba. La diferencia es pequeña (`{python} f"{brecha_total:.3f}"` de LogLoss), pero real.
+3. **Más variables no es mejor.** Otros modelos con más variables como Forma reciente y tiros ayudaron en validación, pero no en prueba. El modelo base M0 fue el más robusto.
+4. **Conclusión.** Las cuotas del mercado ya incorporan la estadística pública, y algo más. Nuestro modelo simple y transparente se acerca, pero no le gana al mercado de forma sistemática.
 
 
 :::
