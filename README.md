@@ -31,30 +31,6 @@ Dashboard-o-pagina/               tablero (Quarto + Python)
 .github/workflows/                publicación automática del tablero en GitHub Pages
 ```
 
-## Reproducibilidad
-
-Requisitos: Python 3.10 y los paquetes de `Dashboard-o-pagina/requirements.txt`
-(pandas, numpy, scipy, statsmodels, scikit-learn, plotly, jupyter).
-
-```bash
-pip install -r Dashboard-o-pagina/requirements.txt
-```
-
-**Datos.** Los archivos originales se descargan de
-[Football-Data.co.uk](https://football-data.co.uk/englandm.php) (archivos `E0`, temporadas 2001/02 a
-2026/27). `Codigo/proyecto_mod_8/Limpieza de datos.ipynb` los consolida en `E0_consolidado.csv`, que ya
-está incluido en el repositorio.
-
-**Análisis.** Ejecutar `Codigo/proyecto_mod_8/Analisis.ipynb` desde su propia carpeta. Calibra K y k,
-construye la base de variables y estima los modelos. `premier_training_data.csv` es esa base exportada;
-el tablero la usa para no reconstruirla en cada publicación.
-
-**Dashboard.** Requiere además [Quarto](https://quarto.org) 1.4 o superior:
-
-```bash
-quarto render Dashboard-o-pagina
-```
-
 
 
 ## Equipo
