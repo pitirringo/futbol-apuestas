@@ -7,9 +7,10 @@ a la Ciencia de Datos.
 (victoria local, empate o victoria visitante) las estadísticas disponibles antes del encuentro,
 comparadas con las probabilidades implícitas en las cuotas de apuestas?
 
-**Respuesta corta:** un modelo de Poisson con tres variables previas al partido (diferencia de Elo y
-goles a favor y en contra ajustados) acierta el 48 % de los partidos de prueba y logra el 84 % de la
-mejora que consiguen las cuotas sobre una referencia ingenua, pero no supera al mercado.
+**Respuesta corta:** un modelo de Poisson con variables previas al partido (diferencia de Elo y goles
+a favor y en contra de la temporada) acierta casi la mitad de los partidos de prueba y recupera la mayor
+parte de la mejora que consiguen las cuotas sobre una referencia ingenua, pero no supera al mercado.
+Las cifras exactas están en el tablero, que las recalcula desde el código cada vez que se publica.
 
 - **Dashboard:** https://pitirringo.github.io/futbol-apuestas/
 - **Repositorio:** https://github.com/pitirringo/futbol-apuestas
@@ -21,10 +22,10 @@ mejora que consiguen las cuotas sobre una referencia ingenua, pero no supera al 
 Codigo/
 ├── proyecto_mod_8/
 │   ├── Limpieza de datos.ipynb   consolidación de los CSV de Football-Data
-│   ├── E0_consolidado.csv        9,450 partidos (2001/02 a sep-2026), 33 variables
-│   ├── wc_predictor.py           Elo, forma reciente y promedios con shrinkage
-│   ├── premier_training_data.csv variables previas al partido (caché, 2019/20 en adelante)
-│   └── Analisis.ipynb            modelos de Poisson M0–M4, validación, prueba y comparación con el mercado
+│   ├── E0_consolidado.csv        base consolidada: un partido por fila, de 2001/02 a la fecha
+│   ├── wc_predictor.py           Elo, forma reciente y goles de la temporada (K y k calibrados)
+│   ├── premier_training_data.csv variables previas al partido (2019/20 en adelante)
+│   └── Analisis.ipynb            calibración de K y k, modelos de Poisson M0–M4, validación, prueba y mercado
 └── Documentacion/                reporte técnico del modelo (LaTeX y PDF)
 Dashboard-o-pagina/               tablero (Quarto + Python)
 .github/workflows/                publicación automática del tablero en GitHub Pages
@@ -44,8 +45,9 @@ pip install -r Dashboard-o-pagina/requirements.txt
 2026/27). `Codigo/proyecto_mod_8/Limpieza de datos.ipynb` los consolida en `E0_consolidado.csv`, que ya
 está incluido en el repositorio.
 
-**Análisis.** Ejecutar `Codigo/proyecto_mod_8/Analisis.ipynb` desde su propia carpeta. Usa la caché
-`premier_training_data.csv`
+**Análisis.** Ejecutar `Codigo/proyecto_mod_8/Analisis.ipynb` desde su propia carpeta. Calibra K y k,
+construye la base de variables y estima los modelos. `premier_training_data.csv` es esa base exportada;
+el tablero la usa para no reconstruirla en cada publicación.
 
 **Dashboard.** Requiere además [Quarto](https://quarto.org) 1.4 o superior:
 

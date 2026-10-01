@@ -5,7 +5,7 @@ archivos y del mismo código que usa el equipo de Código:
 
 - ``wc_predictor.py`` (carga del histórico, Elo, forma reciente y promedios con
   *shrinkage*) se importa directamente desde la carpeta del código.
-- Las funciones de modelación de ``Analisis.ipynb`` (secciones 2, 4 y 7) viven dentro
+- Las funciones de modelación de ``Analisis.ipynb`` (secciones 2, 4 y 8) viven dentro
   del notebook, no en un módulo importable, por eso se reproducen aquí con la misma
   lógica y los mismos nombres. ``tabla_verificacion()`` comprueba que el tablero
   obtiene exactamente las métricas reportadas por el notebook.
@@ -18,8 +18,11 @@ está marcado como "complemento del dashboard" en cada función.
 from __future__ import annotations
 
 import contextlib
+import inspect
 import io
+import json
 import os
+import re
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -29,12 +32,14 @@ import pandas as pd
 import statsmodels.api as sm
 from scipy.stats import poisson, skellam
 from sklearn.metrics import log_loss, mean_absolute_error
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 
 AQUI = Path(__file__).resolve().parent
 RUTA_CODIGO = Path(os.environ.get("RUTA_CODIGO", AQUI.parent / "Codigo" / "proyecto_mod_8")).resolve()
 ARCHIVO_HISTORICO = RUTA_CODIGO / "E0_consolidado.csv"
 ARCHIVO_VARIABLES = RUTA_CODIGO / "premier_training_data.csv"
+ARCHIVO_NOTEBOOK = RUTA_CODIGO / "Analisis.ipynb"
 
 
 @contextlib.contextmanager
@@ -63,14 +68,83 @@ def _importar_wc_predictor():
 wc_predictor = _importar_wc_predictor()
 
 
+@lru_cache(maxsize=None)
+def _notebook() -> dict:
+    return json.loads(ARCHIVO_NOTEBOOK.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=None)
+def configuracion_notebook() -> dict:
+    """Parámetros que el equipo fija en el código de Analisis.ipynb (sección 1).
+
+    Se leen del notebook para que el tablero describa siempre la configuración vigente:
+    ventana y decaimiento de la forma reciente, rejillas de la calibración de K y k, y
+    temporadas usadas como pliegues de la validación temporal.
+    """
+    codigo = "\n".join("".join(c["source"]) for c in _notebook()["cells"] if c["cell_type"] == "code")
+    defectos = inspect.signature(wc_predictor.recent_form).parameters
+
+    def numero(nombre, defecto):
+        m = re.search(rf"^{nombre}\s*=\s*([\d.]+)", codigo, flags=re.M)
+        return float(m.group(1)) if m else defecto
+
+    def rejilla(nombre):
+        # El notebook conserva comentada la rejilla completa que se probó y deja activa sólo
+        # la combinación elegida; se toma la lista más larga.
+        listas = [[float(x) for x in m.split(",") if x.strip()]
+                  for m in re.findall(rf"{nombre}\s*=\s*\[([^\]]*)\]", codigo)]
+        return max(listas, key=len) if listas else []
+
+    bloque = re.search(r"FOLDS_HIPERPARAMETROS\s*=\s*\[(.*?)\n\]", codigo, flags=re.S)
+    anios = [int(a) for a in re.findall(r'Timestamp\("(\d{4})-\d{2}-\d{2}"\)', bloque.group(1))] if bloque else []
+    return {
+        "n_forma": int(numero("N_FORMA", defectos["n"].default)),
+        "decay_forma": numero("DECAY_FORMA", defectos["decay"].default),
+        "rejilla_k_elo": rejilla("K_ELO_CANDIDATOS"),
+        "rejilla_k_shrinkage": rejilla("K_SHRINKAGE_CANDIDATOS"),
+        # Cada pliegue es (inicio, fin); la temporada evaluada es la del inicio.
+        "folds": [f"{a}/{str(a + 1)[-2:]}" for a in anios[0::2]],
+    }
+
+
+@lru_cache(maxsize=None)
+def cifras_publicadas_notebook() -> dict:
+    """LogLoss y ejemplo Arsenal–Man City tal como los imprimió Analisis.ipynb en su última ejecución.
+
+    Se leen de las salidas guardadas del notebook: las tablas de comparación con el mercado
+    (secciones 8 y 9) y la predicción individual (sección 10). Así la verificación compara
+    siempre contra la corrida vigente del equipo, sin copiar cifras a mano.
+    """
+    logloss, ejemplo, conjunto = {}, {}, None
+    for celda in _notebook()["cells"]:
+        for salida in celda.get("outputs", []):
+            texto = "".join(salida.get("text", "")) or "".join(salida.get("data", {}).get("text/plain", ""))
+            if re.search(r"^Validación: \d+/\d+ con cuotas", texto, flags=re.M):
+                conjunto = "Validación"
+            elif re.search(r"^Cuotas válidas en prueba", texto, flags=re.M):
+                conjunto = "Prueba"
+            elif conjunto and "LogLoss_1X2" in texto:
+                for nombre, valor in re.findall(r"^\s*\d+\s+(\S+)\s+\d+\s+([\d.]+)\s*$", texto, flags=re.M):
+                    logloss[(conjunto, nombre)] = float(valor)
+                conjunto = None
+            for clave, valor in re.findall(r"^(lambda_home|lambda_away|P_home|P_draw|P_away)\s*:\s*([\d.]+)",
+                                           texto, flags=re.M):
+                ejemplo[clave] = float(valor)
+    return {"logloss": logloss, "ejemplo": ejemplo}
+
+
 FECHA_INICIO = pd.Timestamp("2019-08-01")
 FECHA_VALIDACION = pd.Timestamp("2024-08-01")
 FECHA_PRUEBA = pd.Timestamp("2025-08-01")
 
-K_SHRINKAGE = 10
-N_FORMA = 10
-DECAY_FORMA = 0.85
-ESCALA_ELO = 400
+# K del Elo y k del shrinkage: los calibró el equipo (Analisis.ipynb, sección 5) y viven en
+# wc_predictor.py. Se leen de ahí para que el tablero use siempre los mismos valores que el notebook.
+K_ELO = wc_predictor.ELO_K
+K_SHRINKAGE = wc_predictor.SHRINKAGE_K
+# Ventana y decaimiento de la forma reciente: los fija el notebook (sección 1).
+N_FORMA = configuracion_notebook()["n_forma"]
+DECAY_FORMA = configuracion_notebook()["decay_forma"]
+ESCALA_ELO = wc_predictor.ELO_SCALE
 
 CLAVES = ["Date", "HomeTeam", "AwayTeam"]
 OBJETIVOS = ["home_goals", "away_goals"]
@@ -123,22 +197,6 @@ NOMBRES = {
     "Mercado_apertura": "Mercado · Apertura",
     "Mercado_cierre": "Mercado · Cierre",
 }
-
-# Cifras publicadas en Analisis.ipynb (secciones 5, 7 y 8) y en el reporte técnico.
-REPORTADO_NOTEBOOK = {
-    ("Validación", "M0_Base"): 0.983690,
-    ("Validación", "M1_Forma"): 0.982334,
-    ("Validación", "M2_Tiros"): 0.977038,
-    ("Validación", "M3_SOT"): 0.977225,
-    ("Validación", "M4_Completo"): 0.975296,
-    ("Validación", "Mercado_apertura"): 0.970552,
-    ("Prueba", "M0_Base"): 1.030556,
-    ("Prueba", "M2_Tiros"): 1.035184,
-    ("Prueba", "M4_Completo"): 1.034434,
-    ("Prueba", "Mercado_apertura"): 1.020000,
-}
-REPORTADO_EJEMPLO_M0 = {"lambda_home": 1.566, "lambda_away": 1.202,
-                        "P_home": 0.4576, "P_draw": 0.2497, "P_away": 0.2927}
 
 SEMILLA = 2026
 N_BOOTSTRAP = 10_000
@@ -240,7 +298,7 @@ def evaluar_predicciones(pred):
 
 
 def probabilidades_mercado(datos, historico, columnas=CUOTAS):
-    """Cuotas decimales -> probabilidad implícita normalizada (notebook §7).
+    """Cuotas decimales -> probabilidad implícita normalizada (notebook §8).
 
     q_j = 1/cuota_j ; p_j = q_j / (q_1 + q_X + q_2). La normalización reparte el
     margen de la casa de apuestas de forma proporcional.
@@ -257,7 +315,7 @@ def _etiqueta_temporada(anio: int) -> str:
 
 @lru_cache(maxsize=None)
 def cargar_historico() -> pd.DataFrame:
-    """Base consolidada del equipo (9 450 partidos) con temporada y resultado."""
+    """Base consolidada del equipo (E0_consolidado.csv) con temporada y resultado."""
     df = pd.read_csv(ARCHIVO_HISTORICO)
     df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, format="mixed")
     df = df.sort_values("Date", kind="stable").reset_index(drop=True)
@@ -269,7 +327,7 @@ def cargar_historico() -> pd.DataFrame:
 
 @lru_cache(maxsize=None)
 def cargar_base_modelacion() -> pd.DataFrame:
-    """premier_training_data.csv, la misma caché que usa el notebook (§3)."""
+    """premier_training_data.csv, la base de variables que construye el notebook (§5), exportada a CSV."""
     td = pd.read_csv(ARCHIVO_VARIABLES)
     td["Date"] = pd.to_datetime(td["Date"])
     return td.sort_values("Date", kind="stable").reset_index(drop=True)
@@ -410,7 +468,7 @@ def ajuste_poisson_goles(max_goles: int = 6) -> pd.DataFrame:
 # ── 5. Modelación y evaluación ────────────────────────────────────────────────
 @lru_cache(maxsize=None)
 def modelos_entrenados():
-    """M0–M4 ajustados en entrenamiento (2019/20–2023/24), como en el notebook §5."""
+    """M0–M4 ajustados en entrenamiento (2019/20–2023/24), como en el notebook §6."""
     train, _, _ = particiones()
     return {nombre: entrenar_modelo(train, *cols) for nombre, cols in ESPECIFICACIONES.items()}
 
@@ -419,7 +477,7 @@ def modelos_entrenados():
 def probabilidades_por_conjunto():
     """Probabilidades 1X2 de cada predictor en validación y prueba.
 
-    Incluye las referencias sin información (azar y referencia ingenua del notebook §6),
+    Incluye las referencias sin información (azar y referencia ingenua del notebook §7),
     los cinco modelos y el mercado (apertura, y cierre como referencia adicional).
     """
     train, val, test = particiones()
@@ -639,7 +697,7 @@ def comparacion_partido_a_partido(conjunto="Prueba") -> pd.DataFrame:
 def datos_simulador(max_goles: int = 5):
     """Probabilidades de M0 para todos los cruces de la temporada 2026/27.
 
-    Usa la misma construcción de variables que el notebook (§9, predecir_partido) con
+    Usa la misma construcción de variables que el notebook (§10, predecir_partido) con
     corte al día siguiente del último partido disponible.
     """
     historial = wc_predictor.load_history(ARCHIVO_HISTORICO)
@@ -649,7 +707,7 @@ def datos_simulador(max_goles: int = 5):
     temporada_actual = int(fecha_corte.year if fecha_corte.month >= 8 else fecha_corte.year - 1)
     actuales = df_pre[df_pre["date"] >= pd.Timestamp(temporada_actual, 8, 1)]
     equipos = sorted(set(actuales["home_team"]) | set(actuales["away_team"]))
-    elo = wc_predictor.build_elo(df_pre)
+    elo = wc_predictor.build_elo(df_pre, k=K_ELO, scale=ESCALA_ELO)
     modelo = modelos_entrenados()[MODELO_SIMULADOR]
 
     filas = [
@@ -686,41 +744,95 @@ def datos_simulador(max_goles: int = 5):
 
 
 # ── 7. Calidad de datos y verificación ────────────────────────────────────────
+def estructura_base() -> dict:
+    """Columnas de E0_consolidado.csv: total, comunes a todas las temporadas y complementarias.
+
+    Las comunes son las que no tienen ningún vacío; las complementarias (cuotas y xG) sólo
+    existen en algunas temporadas, como explica Limpieza de datos.ipynb.
+    """
+    crudo = pd.read_csv(ARCHIVO_HISTORICO)
+    comunes = [c for c in crudo.columns if crudo[c].notna().all()]
+    return {"columnas": crudo.shape[1], "comunes": len(comunes), "complementarias": crudo.shape[1] - len(comunes)}
+
+
+def temporadas_completas() -> dict:
+    """Cuántas temporadas completas hay y cuántos partidos tiene cada una."""
+    por_temp = cargar_historico().groupby("temporada").size()
+    completas = por_temp[por_temp.index < por_temp.index.max()]   # la última está en curso
+    return {"n": len(completas), "partidos_min": int(completas.min()), "partidos_max": int(completas.max())}
+
+
+def diagnostico_m4() -> dict:
+    """Correlación entre tiros y tiros a puerta y VIF máximo de M4 (ecuación del local), en entrenamiento.
+
+    Complemento del dashboard: el notebook reporta el VIF de M0; aquí se mide el traslape de M4.
+    """
+    train, _, _ = particiones()
+    X = preparar_X(train, ESPECIFICACIONES["M4_Completo"][0]).to_numpy(dtype=float)
+    vif = [variance_inflation_factor(X, i) for i in range(1, X.shape[1])]
+    return {"corr_tiros_puerta": float(train["shots_for_home"].corr(train["sot_for_home"])),
+            "vif_max": float(max(vif))}
+
+
+def partidos_excluidos() -> pd.DataFrame:
+    """Partidos desde agosto de 2019 que no están en la base de modelación, con su equipo debutante.
+
+    Son los primeros partidos de equipos sin partidos previos en la base: sin historial no se
+    pueden calcular sus promedios de tiros, y esas filas no entran a premier_training_data.csv.
+    """
+    df = cargar_historico()
+    desde = df.loc[df["Date"] >= FECHA_INICIO, CLAVES]
+    cruce = desde.merge(cargar_base_modelacion()[CLAVES], on=CLAVES, how="left", indicator=True)
+    faltan = cruce.loc[cruce["_merge"] == "left_only", CLAVES].reset_index(drop=True)
+    debut = pd.concat([df[["Date", "HomeTeam"]].set_axis(["Date", "equipo"], axis=1),
+                       df[["Date", "AwayTeam"]].set_axis(["Date", "equipo"], axis=1)]).groupby("equipo")["Date"].min()
+    faltan["debutante"] = [h if debut[h] == f else a for f, h, a in faltan[CLAVES].itertuples(index=False)]
+    return faltan
+
+
 def auditoria_datos() -> pd.DataFrame:
     """Revisión de calidad de E0_consolidado.csv (complemento del dashboard)."""
     df = cargar_historico()
     por_temp = df.groupby("temporada").size()
-    incompletas = [f"{_etiqueta_temporada(t)} ({n})" for t, n in por_temp.items() if n < 380 and t < 2026]
+    tc = temporadas_completas()
+    incompletas = [f"{_etiqueta_temporada(t)} ({n})" for t, n in por_temp.items()
+                   if n < tc["partidos_max"] and t < por_temp.index.max()]
     ftr = np.where(df["FTHG"] > df["FTAG"], "H", np.where(df["FTHG"] < df["FTAG"], "A", "D"))
     malos_tiros = df[(df["HST"] > df["HS"]) | (df["AST"] > df["AS"])]
     detalle_tiros = "; ".join(
         f"{r.HomeTeam}–{r.AwayTeam} {r.Date:%Y-%m-%d}" for r in malos_tiros.itertuples()) or "—"
     goles_sin_tiro = int((df["FTHG"] > df["HST"]).sum() + (df["FTAG"] > df["AST"]).sum())
-    td = cargar_base_modelacion()
-    completas_2019 = df[(df["Date"] >= FECHA_INICIO)]
-    excluidos = len(completas_2019) - len(td)
+    excluidos = partidos_excluidos()
+    nota_incompletas = ("Afecta sólo al Elo histórico, no al periodo de modelación" if incompletas else
+                        f"Las {tc['n']} temporadas completas tienen {tc['partidos_max']} partidos "
+                        "(una primera lectura descartaba 90 de 2003/04 y 2004/05)")
     filas = [
-        ("Registros", f"{len(df):,} partidos, 33 columnas", "Base completa del equipo, 18-ago-2001 a 14-sep-2026"),
+        ("Registros", f"{len(df):,} partidos, {estructura_base()['columnas']} columnas",
+         f"Base completa del equipo, {df['Date'].min():%d-%m-%Y} a {df['Date'].max():%d-%m-%Y}"),
         ("Duplicados (fecha, local, visitante)", f"{df.duplicated(CLAVES).sum()}", "Sin duplicados"),
         ("Resultado (FTR) incongruente con los goles", f"{(ftr != df['FTR']).sum()}", "Sin incongruencias"),
-        ("Temporadas incompletas", ", ".join(incompletas) or "—",
-         "Faltan 45 partidos en cada una; afecta sólo al Elo histórico, no al periodo de modelación"),
+        ("Temporadas incompletas", ", ".join(incompletas) or "Ninguna", nota_incompletas),
         ("Tiros a puerta mayores que tiros", f"{len(malos_tiros)}", f"Error de la fuente: {detalle_tiros}; no se corrigió"),
         ("Goles mayores que tiros a puerta", f"{goles_sin_tiro}", "Plausible (autogoles); no es error"),
         ("Cuotas Bet365", "faltan en 2001/02", "Se usan desde 2002/03 para el análisis histórico del mercado"),
         ("Cuotas promedio de apertura y cierre", "sólo desde 2019/20", "Por eso la comparación modelo–mercado es 2024/25–2026/27"),
         ("Goles esperados (xG)", "sólo 2026/27", "No se usan: cobertura insuficiente"),
-        ("Partidos excluidos de la base de modelación", f"{excluidos}",
-         "Equipos sin historial previo de tiros en la base (Brentford 2021, Nott'm Forest 2022, Luton 2023, Coventry 2026)"),
+        ("Partidos excluidos de la base de modelación", f"{len(excluidos)}",
+         "Equipos sin historial previo de tiros en la base ("
+         + ", ".join(f"{r.debutante} {r.Date.year}" for r in excluidos.itertuples()) + ")"),
     ]
     return pd.DataFrame(filas, columns=["Revisión", "Resultado", "Comentario"])
 
 
 def tabla_verificacion(metricas: pd.DataFrame, simulador) -> pd.DataFrame:
-    """Compara cifras del dashboard contra las publicadas por el notebook/reporte."""
+    """Compara cifras del dashboard contra las que imprimió Analisis.ipynb en su última ejecución."""
+    publicadas = cifras_publicadas_notebook()
     filas = []
     m = metricas.set_index(["conjunto", "predictor"])["logloss"]
-    for (conjunto, pred), valor in REPORTADO_NOTEBOOK.items():
+    orden = {nombre: i for i, nombre in enumerate(NOMBRES)}
+    claves = sorted(publicadas["logloss"], key=lambda k: (k[0] != "Validación", orden.get(k[1], 99)))
+    for conjunto, pred in claves:
+        valor = publicadas["logloss"][(conjunto, pred)]
         calc = m.loc[(conjunto, pred)]
         filas.append({"Cifra": f"LogLoss {NOMBRES[pred]} ({conjunto.lower()})",
                       "Notebook": f"{valor:.6f}", "Dashboard": f"{calc:.6f}",
@@ -732,9 +844,15 @@ def tabla_verificacion(metricas: pd.DataFrame, simulador) -> pd.DataFrame:
                 ("P(empate) M0", "P_draw", ej["p_empate"], 4),
                 ("P(victoria Man City) M0", "P_away", ej["p_visita"], 4)]
     for nombre, clave, valor, dec in comparar:
-        ref = REPORTADO_EJEMPLO_M0[clave]
-        filas.append({"Cifra": f"Ejemplo del reporte: {nombre}", "Notebook": f"{ref:.{dec}f}",
+        if clave not in publicadas["ejemplo"]:
+            continue
+        ref = round(publicadas["ejemplo"][clave], dec)
+        filas.append({"Cifra": f"Ejemplo Arsenal–Man City: {nombre}", "Notebook": f"{ref:.{dec}f}",
                       "Dashboard": f"{valor:.{dec}f}", "Coincide": abs(valor - ref) < 0.6 * 10 ** -dec})
+    # Si el notebook se guardó sin salidas no hay contra qué comparar: se marca como diferencia.
+    if not publicadas["logloss"] or len(publicadas["ejemplo"]) < len(comparar):
+        filas.append({"Cifra": "Cifras publicadas en Analisis.ipynb", "Notebook": "no encontradas",
+                      "Dashboard": "—", "Coincide": False})
     return pd.DataFrame(filas)
 
 
@@ -766,6 +884,11 @@ def preparar_todo():
         "simulador": simulador,
         "auditoria": auditoria_datos(),
         "verificacion": tabla_verificacion(metricas, simulador),
+        "config_notebook": configuracion_notebook(),
+        "estructura": estructura_base(),
+        "temporadas_completas": temporadas_completas(),
+        "diagnostico_m4": diagnostico_m4(),
+        "excluidos": partidos_excluidos(),
         "margen": {k: v["margen"] for k, v in probabilidades_por_conjunto().items()},
         "particiones": {k: len(v) for k, v in zip(("train", "val", "test"), particiones())},
     }

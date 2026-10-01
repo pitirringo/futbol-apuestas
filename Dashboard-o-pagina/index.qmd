@@ -57,7 +57,9 @@ def acc(conjunto, predictor):
 
 def ic(conjunto, a, b):
     r = bt.loc[(conjunto, a, b)]
-    return f"{r['diferencia']:+.3f} (IC 95 %: {r['ic_inf']:+.3f} a {r['ic_sup']:+.3f})"
+    # Con un extremo muy cercano a cero, 3 decimales mostrarían "−0.000"; se usan 4.
+    dec = 4 if min(abs(r['ic_inf']), abs(r['ic_sup'])) < 0.0005 else 3
+    return f"{r['diferencia']:+.{dec}f} (IC 95 %: {r['ic_inf']:+.{dec}f} a {r['ic_sup']:+.{dec}f})"
 
 brecha_total = bt.loc[("Validación + prueba", "M0_Base", "Mercado_apertura"), "diferencia"]
 ultima_fecha = fecha_es(g["fecha_max"])
@@ -65,6 +67,39 @@ disp = d["dispersion"]
 ventaja_elo = round(d["ventaja_elo"], -1)
 n_train, n_val, n_test = d["particiones"]["train"], d["particiones"]["val"], d["particiones"]["test"]
 brecha = d["brecha"]
+
+# Parámetros y diagnósticos que el texto cita: se leen del código del equipo, no se escriben a mano.
+cfg, tc, est, diag = d["config_notebook"], d["temporadas_completas"], d["estructura"], d["diagnostico_m4"]
+ef = d["efectos"].set_index(["ecuacion", "variable"])
+p_ga_local = ef.loc[("Goles del local", "ga_away"), "p_valor"]       # goles recibidos por el rival
+p_ga_visita = ef.loc[("Goles del visitante", "ga_home"), "p_valor"]
+n_var_m0 = len(dd.ESPECIFICACIONES["M0_Base"][0])
+n_var_m4 = len(dd.ESPECIFICACIONES["M4_Completo"][0])
+elo_inicial = f"{dd.wc_predictor.ELO_INIT:,.0f}"
+decaimiento = f"{dd.DECAY_FORMA:g}"
+
+def lista(xs):
+    return xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " y " + xs[-1]
+
+def rango(xs):
+    return f"{min(xs):g} a {max(xs):g}"
+
+partidos_temporada = (f"{tc['partidos_max']} partidos cada una" if tc["partidos_min"] == tc["partidos_max"]
+                      else f"entre {tc['partidos_min']} y {tc['partidos_max']} partidos")
+texto_k = f"k = {dd.K_SHRINKAGE:g}" + (", es decir, sin mezcla" if dd.K_SHRINKAGE == 0 else "")
+rejilla_K, rejilla_k = cfg["rejilla_k_elo"], cfg["rejilla_k_shrinkage"]
+# Si el K elegido quedó en un extremo de la rejilla, el óptimo podría estar fuera de ella.
+borde_K = "inferior" if dd.K_ELO == min(rejilla_K) else "superior" if dd.K_ELO == max(rejilla_K) else None
+texto_borde = {
+    "inferior": "El K elegido quedó en el borde inferior de la rejilla, así que un valor menor podría ser aún mejor.",
+    "superior": "El K elegido quedó en el borde superior de la rejilla, así que un valor mayor podría ser aún mejor.",
+    None: "",
+}[borde_K]
+texto_extension_K = {
+    "inferior": f"Ampliar la búsqueda de K por debajo de {min(rejilla_K):g} y optimizar",
+    "superior": f"Ampliar la búsqueda de K por encima de {max(rejilla_K):g} y optimizar",
+    None: "Optimizar",
+}[borde_K]
 
 # Tablas (vista tabular de cada gráfica, para quien no puede o no quiere leer la gráfica)
 t = d["temporadas"]
@@ -156,7 +191,7 @@ Elo y goles de la temporada.
 
 ### Column {width=62%}
 
-::: {.card title="El modelo recupera casi toda la ventaja del mercado, sin superarlo"}
+::: {.card title="El modelo recupera la mayor parte de la ventaja del mercado, sin superarlo"}
 <p class="subtitulo">Cuánto mejora cada predictor frente a una referencia ingenua que sólo conoce la frecuencia histórica de goles. Barra más larga = mejor pronóstico.<br><span class="leyenda"><i class="muestra" style="background:#898781;opacity:.4"></i>validación 2024/25</span><span class="leyenda"><i class="muestra" style="background:#898781"></i>prueba, ago-2025 a sep-2026</span></p>
 
 ```{python}
@@ -167,7 +202,7 @@ gr.mostrar(gr.mejora_sobre_ingenua(met))
 ### Column {width=38%}
 
 ::: {.card .lectura title="Resumen"}
-1. **Las estadísticas sí anticipan resultados.** Con sólo 3 variables, el modelo acierta `{python} pct(acc('Prueba', 'M0_Base'))` de los partidos de prueba, contra `{python} pct(acc('Prueba', 'Ingenua'))` de apostar siempre por el local. La mejora es estadísticamente significativa.
+1. **Las estadísticas sí anticipan resultados.** Con sólo `{python} n_var_m0` variables, el modelo acierta `{python} pct(acc('Prueba', 'M0_Base'))` de los partidos de prueba, contra `{python} pct(acc('Prueba', 'Ingenua'))` de apostar siempre por el local. La mejora es estadísticamente significativa.
 2. **El mercado sabe un poco más.** Sus cuotas pronostican mejor en validación y en prueba. Con ambos periodos juntos (`{python} f"{n_val + n_test:,}"` partidos) la diferencia es pequeña (`{python} f"{brecha_total:.3f}"` de LogLoss), pero real.
 3. **Más variables no es mejor.** Forma reciente y tiros ayudaron en validación, pero no en prueba. El modelo base M0 fue el más robusto.
 4. **Conclusión.** Las cuotas ya incorporan la estadística pública, y algo más. Un modelo simple y transparente se acerca, pero no le gana al mercado de forma sistemática.
@@ -192,7 +227,7 @@ Gana el equipo local
 
 `{python} pct(g['pct_local'])`
 
-Empate `{python} pct(g['pct_empate'])` · visitante `{python} pct(g['pct_visita'])` (25 temporadas completas)
+Empate `{python} pct(g['pct_empate'])` · visitante `{python} pct(g['pct_visita'])` (`{python} tc['n']` temporadas completas)
 :::
 
 ::: {.valuebox icon="trophy" color="#fdf0ea"}
@@ -229,8 +264,8 @@ gr.mostrar(gr.resultado_favorito(fav))
 
 ::: {.card title="Qué significa para el modelo"}
 - **Predecir fútbol es difícil por naturaleza.** Si el favorito de las casas de apuestas gana sólo `{python} pct(fav['gana_favorito'], 0)` de las veces, un buen modelo debe aspirar a acertar cerca de 50 %, no 80 %. Por eso el tablero evalúa **probabilidades** (LogLoss) y no sólo aciertos.
-- **La temporada sin público (2020/21) no explica la brecha.** Al reentrenar M0 sin esos `{python} sens['partidos_excluidos']` partidos, la probabilidad media de victoria local sube de `{python} pct(sens['original_test_p_local'])` a `{python} pct(sens['sin_publico_test_p_local'])`, pero el LogLoss de prueba no mejora (`{python} num(sens['original_test_logloss'], 4)` → `{python} num(sens['sin_publico_test_logloss'], 4)`).
-- **Dos temporadas incompletas.** 2003/04 y 2004/05 tienen 335 de 380 partidos. Sólo afectan al Elo histórico, que se estabiliza años antes del periodo de modelación.
+- **La temporada sin público (2020/21) no explica la brecha.** Al reentrenar M0 sin esos `{python} sens['partidos_excluidos']` partidos, la probabilidad media de victoria local sube de `{python} pct(sens['original_test_p_local'])` a `{python} pct(sens['sin_publico_test_p_local'])`, pero el LogLoss de prueba casi no cambia (`{python} num(sens['original_test_logloss'], 4)` → `{python} num(sens['sin_publico_test_logloss'], 4)`), mientras que la brecha con el mercado es de `{python} num(ll('Prueba', 'M0_Base') - ll('Prueba', 'Mercado_apertura'), 3)`.
+- **Base completa.** Una primera lectura de los archivos descartaba 90 partidos de 2003/04 y 2004/05 por renglones con formato irregular. La limpieza final los recupera: las `{python} tc['n']` temporadas completas tienen `{python} partidos_temporada`.
 :::
 
 ::: {.card title="Tabla por temporada"}
@@ -266,7 +301,7 @@ gr.mostrar(gr.calibracion_mercado(d["calibracion_mercado"]))
 ## Row {.tabset height=480px}
 
 ::: {.card title="Los goles se comportan como un conteo de Poisson"}
-<p class="subtitulo">Goles por partido observados contra una distribución de Poisson con la misma media (25 temporadas completas). El buen ajuste justifica usar regresión de Poisson.<br><span class="leyenda"><i class="muestra" style="background:#898781"></i>observado</span><span class="leyenda"><i class="muestra rombo" style="background:#2a78d6"></i>Poisson con la misma media</span></p>
+<p class="subtitulo">Goles por partido observados contra una distribución de Poisson con la misma media (`{python} tc['n']` temporadas completas). El buen ajuste justifica usar regresión de Poisson.<br><span class="leyenda"><i class="muestra" style="background:#898781"></i>observado</span><span class="leyenda"><i class="muestra rombo" style="background:#2a78d6"></i>Poisson con la misma media</span></p>
 
 ```{python}
 gr.mostrar(gr.ajuste_poisson(d["poisson"]))
@@ -303,7 +338,7 @@ HTML(tabla_calibracion)
 <div class="flujo">
   <div class="paso"><b>Histórico</b><span>`{python} f"{g['partidos']:,}"` partidos, 2001–2026</span></div>
   <div class="flecha">→</div>
-  <div class="paso"><b>Variables previas al partido</b><span>Elo · goles ajustados · forma reciente · tiros</span></div>
+  <div class="paso"><b>Variables previas al partido</b><span>Elo · goles de la temporada · forma reciente · tiros</span></div>
   <div class="flecha">→</div>
   <div class="paso modelo"><div class="sub"><b>Poisson: goles del local</b><span>λ local</span></div><div class="sub"><b>Poisson: goles del visitante</b><span>λ visita</span></div></div>
   <div class="flecha">→</div>
@@ -349,7 +384,7 @@ gr.mostrar(gr.brecha_por_resultado(brecha))
 ## Row {.tabset height=530px}
 
 ::: {.card title="Qué variables pesan más"}
-<p class="subtitulo">Efecto sobre los goles esperados de subir una desviación estándar cada variable de M0, con intervalo de 95 %. La diferencia de Elo domina en ambas ecuaciones; los goles en contra del local no son significativos en la ecuación del visitante.</p>
+<p class="subtitulo">Efecto sobre los goles esperados de subir una desviación estándar cada variable de M0, con intervalo de 95 %. La diferencia de Elo domina en ambas ecuaciones. Los goles en contra del rival pesan poco: no son significativos en la ecuación del visitante (p = `{python} f"{p_ga_visita:.3g}"`) y quedan en el límite en la del local (p = `{python} f"{p_ga_local:.3g}"`).</p>
 
 ```{python}
 gr.mostrar(gr.efectos(d["efectos"]))
@@ -387,7 +422,7 @@ HTML(tabla_metricas)
 HTML(tabla_bootstrap)
 ```
 
-<p class="nota"><b>Lectura.</b> El modelo supera con claridad a la referencia ingenua: `{python} ic('Prueba', 'M0_Base', 'Ingenua')`. Frente al mercado, la prueba sola no es concluyente, `{python} ic('Prueba', 'M0_Base', 'Mercado_apertura')`; con validación y prueba juntas, sí: `{python} ic('Validación + prueba', 'M0_Base', 'Mercado_apertura')`. Entre M4 y M0 ninguna diferencia es concluyente.</p>
+<p class="nota"><b>Lectura.</b> El modelo supera con claridad a la referencia ingenua: `{python} ic('Prueba', 'M0_Base', 'Ingenua')`. Frente al mercado, la prueba sola no es concluyente, `{python} ic('Prueba', 'M0_Base', 'Mercado_apertura')`; con validación y prueba juntas, sí: `{python} ic('Validación + prueba', 'M0_Base', 'Mercado_apertura')`. Entre M4 y M0, en validación M4 fue mejor por un margen mínimo, `{python} ic('Validación', 'M4_Completo', 'M0_Base')`; en prueba la diferencia no es concluyente, `{python} ic('Prueba', 'M4_Completo', 'M0_Base')`.</p>
 :::
 
 # Explora un partido {#simulador}
@@ -397,7 +432,8 @@ HTML(tabla_bootstrap)
 ```{python}
 #| echo: false
 ojs_define(sim={"equipos": sim["equipos"], "partidos": sim["partidos"], "stats": sim["stats"],
-                "temporada": sim["temporada"], "fecha": ultima_fecha})
+                "temporada": sim["temporada"], "fecha": ultima_fecha,
+                "k_elo": dd.K_ELO, "k_shrinkage": dd.K_SHRINKAGE})
 ```
 
 ```{ojs}
@@ -478,15 +514,20 @@ html`<div class="sim-kpis">
     <thead><tr><th>Variable de M0</th><th>${local}</th><th>${visita}</th></tr></thead>
     <tbody>
       <tr><td>Elo antes del partido</td><td>${L.elo.toFixed(0)}</td><td>${V.elo.toFixed(0)}</td></tr>
-      <tr><td>Goles a favor por partido (ajustado)</td><td>${L.gf.toFixed(2)}</td><td>${V.gf.toFixed(2)}</td></tr>
-      <tr><td>Goles en contra por partido (ajustado)</td><td>${L.ga.toFixed(2)}</td><td>${V.ga.toFixed(2)}</td></tr>
+      <tr><td>Goles a favor por partido (temporada)</td><td>${L.gf.toFixed(2)}</td><td>${V.gf.toFixed(2)}</td></tr>
+      <tr><td>Goles en contra por partido (temporada)</td><td>${L.ga.toFixed(2)}</td><td>${V.ga.toFixed(2)}</td></tr>
       <tr><td>Partidos jugados en ${sim.temporada}</td><td>${L.partidos_temporada}</td><td>${V.partidos_temporada}</td></tr>
     </tbody>
   </table>
   <p class="nota" style="margin-top:.8rem">Diferencia de Elo: <b>${Math.abs(L.elo - V.elo).toFixed(0)} puntos</b> a favor de
-  ${L.elo >= V.elo ? local : visita}. Los goles ajustados mezclan la temporada en curso con la anterior
-  (<i>shrinkage</i>, k = 10): con pocos partidos jugados pesa más la temporada pasada, y un equipo recién
-  ascendido recibe el promedio de la liga.</p>
+  ${L.elo >= V.elo ? local : visita}. ${sim.k_shrinkage === 0
+    ? html`Los goles a favor y en contra son promedios de la temporada en curso
+      (<i>shrinkage</i> k = ${sim.k_shrinkage}: la calibración del equipo mostró que mezclarlos con la temporada anterior no
+      mejora el pronóstico). Antes del primer partido de la temporada se usa la anterior, y un equipo recién ascendido
+      recibe el promedio de la liga. Con pocos partidos jugados, estos promedios todavía varían mucho.`
+    : html`Los goles a favor y en contra mezclan la temporada en curso con la anterior
+      (<i>shrinkage</i> k = ${sim.k_shrinkage}, peso n/(n+k) a la actual): con pocos partidos jugados pesa más la
+      temporada pasada, y un equipo recién ascendido recibe el promedio de la liga.`}</p>
   <p class="nota">El marcador más probable (recuadro negro) suele ser corto. Un equipo puede ser favorito aunque
   el marcador individual más probable sea un empate, porque su victoria suma muchos marcadores distintos.</p>`;
 }
@@ -497,9 +538,9 @@ html`<div class="sim-kpis">
 ## Row {.tabset height=660px}
 
 ::: {.card title="Datos y procedencia"}
-**Fuente.** [Football-Data.co.uk](https://football-data.co.uk/englandm.php): un archivo CSV por temporada de la Premier League (código `E0`), de 2001/02 a 2026/27. Son 26 archivos; el último llega hasta el `{python} ultima_fecha`. Se descargan directamente del sitio, sin API.
+**Fuente.** [Football-Data.co.uk](https://football-data.co.uk/englandm.php): un archivo CSV por temporada de la Premier League (código `E0`), de 2001/02 a 2026/27. Son `{python} g['temporadas']` archivos; el último llega hasta el `{python} ultima_fecha`. Se descargan directamente del sitio, sin API.
 
-**Consolidación** (`Limpieza de datos.ipynb`). Se unieron los 26 archivos con 22 columnas presentes en todas las temporadas (resultado final y al medio tiempo, tiros, tiros a puerta, córners, faltas, tarjetas y árbitro) y 11 complementarias (cuotas de Bet365, cuotas promedio de apertura y de cierre, y goles esperados). Resultado: `E0_consolidado.csv`, con **`{python} f"{g['partidos']:,}"` partidos × 33 variables**.
+**Consolidación** (`Limpieza de datos.ipynb`). Se unieron los `{python} g['temporadas']` archivos con las `{python} est['comunes']` columnas presentes en todas las temporadas (división, fecha, equipos, resultado final y al medio tiempo, árbitro, tiros, tiros a puerta, faltas, córners y tarjetas) y `{python} est['complementarias']` complementarias (cuotas de Bet365, cuotas promedio de apertura y de cierre, y goles esperados). Resultado: `E0_consolidado.csv`, con **`{python} f"{g['partidos']:,}"` partidos × `{python} est['columnas']` variables**.
 
 | Elemento | Definición |
 |---|---|
@@ -507,7 +548,7 @@ html`<div class="sim-kpis">
 | Población | Partidos de la Premier League inglesa |
 | Periodo | 2001–2026 para el histórico (Elo y exploración); 2019/20–2026/27 para modelar |
 | Variable objetivo | Goles del local y del visitante, de los que se deriva el resultado 1X2 |
-| Variables explicativas | Diferencia de Elo, goles a favor y en contra ajustados, forma reciente, tiros y tiros a puerta; todas previas al partido |
+| Variables explicativas | Diferencia de Elo, goles a favor y en contra de la temporada, forma reciente, tiros y tiros a puerta; todas previas al partido |
 | Referencia externa | Cuotas promedio de apertura (`AvgH`, `AvgD`, `AvgA`), convertidas a probabilidad |
 | Datos complementarios | Ninguno externo: las cuotas vienen en los mismos archivos |
 :::
@@ -515,11 +556,13 @@ html`<div class="sim-kpis">
 ::: {.card title="Limpieza y calidad"}
 **Decisiones de limpieza**
 
-1. **No se eliminaron partidos por faltar cuotas o xG.** Esas columnas quedan vacías, y así el histórico completo sirve para el Elo.
-2. **Fechas homologadas.** Los archivos antiguos usan `dd/mm/aa` y los recientes `dd/mm/aaaa`. Se leyeron con el día primero, se exportaron en formato ISO y se verificó que ninguna fecha invirtiera día y mes.
-3. **Orden cronológico estricto**, para calcular cada variable sin usar información del futuro.
-4. **La modelación empieza en agosto de 2019**, cuando aparecen las cuotas promedio de apertura y de cierre. Así se puede comparar con el mercado y quedan cinco temporadas de entrenamiento.
-5. **Se excluyeron 4 partidos** de equipos debutantes sin partidos previos en la base para calcular tiros.
+1. **Lectura completa de los archivos.** No se descartan renglones con formato irregular. Una primera versión lo hacía y perdía 90 partidos de 2003/04 y 2004/05.
+2. **No se eliminaron partidos por faltar cuotas o xG.** Esas columnas quedan vacías, y así el histórico completo sirve para el Elo.
+3. **Fechas homologadas.** Los archivos antiguos usan `dd/mm/aa` y los recientes `dd/mm/aaaa`. Se leyeron con el día primero, se exportaron en formato ISO y se verificó que ninguna fecha invirtiera día y mes.
+4. **Orden cronológico estricto**, para calcular cada variable sin usar información del futuro.
+5. **La modelación empieza en agosto de 2019**, cuando aparecen las cuotas promedio de apertura y de cierre. Así se puede comparar con el mercado y quedan cinco temporadas de entrenamiento.
+6. **Se excluyeron `{python} len(d['excluidos'])` partidos** de equipos debutantes sin partidos previos en la base para calcular tiros.
+7. **Revisiones de consistencia** en el notebook: duplicados, un equipo contra sí mismo, valores negativos, goles al medio tiempo mayores que los finales, tiros a puerta mayores que tiros, resultado contra marcador, cuotas ≤ 1 y xG negativos.
 
 **Revisión de calidad de `E0_consolidado.csv`**
 
@@ -533,17 +576,18 @@ Todas se calculan sólo con partidos **anteriores** al encuentro (`wc_predictor.
 
 | Variable | Cómo se construye | Parámetro |
 |---|---|---|
-| Diferencia de Elo | Rating que sube al ganar y baja al perder, más cuanto más inesperado el resultado; entra como (Elo local − Elo visitante) / 400 | Inicial 1 500, K = 30 |
-| Goles a favor y en contra ajustados | Promedio de la temporada en curso mezclado con el de la anterior (peso n/(n+k) a la actual); si el equipo no jugó la anterior, promedio de la liga | k = 10 |
-| Forma reciente | Promedio ponderado de goles de los últimos 10 partidos, con más peso a los recientes | Decaimiento 0.85 |
-| Tiros y tiros a puerta | Mismo promedio ponderado, a favor y concedidos | 10 partidos, 0.85 |
+| Diferencia de Elo | Rating que sube al ganar y baja al perder, más cuanto más inesperado el resultado; entra como (Elo local − Elo visitante) / `{python} f"{dd.ESCALA_ELO:g}"` | Inicial `{python} elo_inicial`, K = `{python} f"{dd.K_ELO:g}"` (calibrado) |
+| Goles a favor y en contra de la temporada | Promedio de la temporada en curso; antes de su primer partido, el de la temporada anterior (o el de la liga, si el equipo no jugó en Premier). La mezcla con la temporada anterior (*shrinkage*, peso n/(n+k) a la actual) se calibró y el mejor valor fue `{python} texto_k` | k = `{python} f"{dd.K_SHRINKAGE:g}"` (calibrado) |
+| Forma reciente | Promedio ponderado de goles de los últimos `{python} dd.N_FORMA` partidos, con más peso a los recientes | Decaimiento `{python} decaimiento` |
+| Tiros y tiros a puerta | Mismo promedio ponderado, a favor y concedidos | `{python} dd.N_FORMA` partidos, `{python} decaimiento` |
 
-**Especificaciones comparadas.** M0 = Elo + goles ajustados (3 variables por ecuación) · M1 = M0 + forma · M2 = M0 + tiros · M3 = M0 + tiros a puerta · M4 = todo (9 variables). En M4 las variables se traslapan (correlación de 0.85 entre tiros y tiros a puerta; VIF máximo 5.5), lo que vuelve inestables sus coeficientes.
+**Especificaciones comparadas.** M0 = Elo + goles de la temporada (`{python} n_var_m0` variables por ecuación) · M1 = M0 + forma · M2 = M0 + tiros · M3 = M0 + tiros a puerta · M4 = todo (`{python} n_var_m4` variables). En M4 las variables se traslapan (correlación de `{python} num(diag['corr_tiros_puerta'], 2)` entre tiros y tiros a puerta; VIF máximo `{python} num(diag['vif_max'], 1)`), lo que vuelve inestables sus coeficientes.
 :::
 
 ::: {.card title="Evaluación"}
 - **Partición temporal, no aleatoria.** El modelo aprende del pasado y se evalúa con el futuro, como se usaría en la práctica. Entrenamiento 2019/20–2023/24 (`{python} f"{n_train:,}"`), validación 2024/25 (`{python} n_val`) y prueba del 15 de agosto de 2025 al `{python} ultima_fecha` (`{python} n_test`). Los coeficientes no se reestiman después del entrenamiento.
 - **LogLoss (métrica principal).** Menos el promedio del logaritmo de la probabilidad asignada al resultado que ocurrió. Premia dar mucha probabilidad a lo que pasa y castiga la sobreconfianza. Como referencia, el azar puro da ln 3 ≈ 1.099, y exp(−LogLoss) es la probabilidad media (geométrica) asignada al resultado real.
+- **Calibración de K y k.** El K del Elo y el k del *shrinkage* se eligieron con validación temporal de ventana creciente: se entrena con todo lo anterior y se evalúa en `{python} lista(cfg['folds'])`, todas dentro del periodo de entrenamiento. Se probaron K de `{python} rango(rejilla_K)` y k de `{python} rango(rejilla_k)` con M0, y ganó la combinación de menor LogLoss: K = `{python} f"{dd.K_ELO:g}"` y k = `{python} f"{dd.K_SHRINKAGE:g}"`. Ni la validación 2024/25 ni la prueba se usaron para elegirlos.
 - **MAE de goles.** Error absoluto medio entre goles observados y esperados; evalúa λ, no las probabilidades 1X2.
 - **Complementos.** Tasa de aciertos (fácil de comunicar, pero ignora la confianza), intervalos bootstrap, calibración y descomposición de la brecha con el mercado.
 - **Mercado.** Probabilidad implícita = 1/cuota, normalizada para que las tres sumen 1. Esto retira el margen de la casa de apuestas: `{python} num(d['margen']['Validación'], 2)` % en validación y `{python} num(d['margen']['Prueba'], 2)` % en prueba, en promedio.
@@ -553,8 +597,8 @@ Todas se calculan sólo con partidos **anteriores** al encuentro (`wc_predictor.
 **Limitaciones**
 
 - **Independencia entre goles.** Poisson + Skellam supone que los goles de un equipo no dependen de los del otro; por eso subestima los empates (ver "Calibración" en *El modelo*).
-- **Parámetros sin optimizar.** K = 30, k = 10, decaimiento 0.85 y ventana de 10 partidos.
-- **Equipos ascendidos.** El Elo sólo usa partidos de Premier: un equipo que regresa conserva el Elo de su última temporada en primera, a veces de hace años, y uno nuevo empieza con 1 500. Su forma reciente también puede venir de temporadas lejanas.
+- **Parámetros optimizados sólo en parte.** K y k se calibraron en una rejilla (K de `{python} rango(rejilla_K)`, k de `{python} rango(rejilla_k)`) y sólo con M0. `{python} texto_borde` El decaimiento `{python} decaimiento` y la ventana de `{python} dd.N_FORMA` partidos no se optimizaron.
+- **Equipos ascendidos.** El Elo sólo usa partidos de Premier: un equipo que regresa conserva el Elo de su última temporada en primera, a veces de hace años, y uno nuevo empieza con `{python} elo_inicial`. Su forma reciente también puede venir de temporadas lejanas.
 - **Información ausente.** Alineaciones, lesiones, calendario, descanso y fichajes, que el mercado sí considera.
 - **Muestra de prueba pequeña** (`{python} n_test` partidos): las diferencias entre especificaciones caen dentro del ruido.
 - **Mercado aproximado.** Cuotas promedio con normalización proporcional; no se evaluó rentabilidad.
@@ -562,14 +606,14 @@ Todas se calculan sólo con partidos **anteriores** al encuentro (`wc_predictor.
 **Posibles extensiones**
 
 - Corrección de Dixon–Coles para marcadores bajos y empates, o regresión binomial negativa.
-- Optimizar K, k y el decaimiento con validación temporal.
+- `{python} texto_extension_K` también el decaimiento y la ventana de forma reciente.
 - Elo con segunda división, para tratar mejor a los ascendidos.
 - Goles esperados (xG) cuando haya cobertura histórica, y comparación contra cuotas de cierre.
 - Detectar equipos que el mercado sobrevalora o infravalora de forma sistemática.
 :::
 
 ::: {.card title="Reproducibilidad"}
-**Verificación.** El tablero recalcula todo desde los archivos del equipo cada vez que se genera. Esta tabla compara sus cifras con las del notebook y el reporte técnico: `{python} "todas coinciden" if verificacion_ok else "HAY DIFERENCIAS: revisar antes de publicar"`.
+**Verificación.** El tablero recalcula todo desde los archivos del equipo cada vez que se genera. Esta tabla compara sus cifras con las que publica el notebook del equipo (`Analisis.ipynb`): `{python} "todas coinciden" if verificacion_ok else "HAY DIFERENCIAS: revisar antes de publicar"`.
 
 ```{python}
 HTML(tabla_verificacion)
