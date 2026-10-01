@@ -176,7 +176,9 @@ Partidos acertados por el modelo
 
 `{python} pct(acc('Prueba', 'M0_Base'))`
 
-Mercado: `{python} pct(acc('Prueba', 'Mercado_apertura'))` · Referencia ingenua: `{python} pct(acc('Prueba', 'Ingenua'))` 
+Mercado: `{python} pct(acc('Prueba', 'Mercado_apertura'))` 
+
+Referencia ingenua: `{python} pct(acc('Prueba', 'Ingenua'))` 
 :::
 
 ::: {.valuebox icon="sliders" color="#f3f2ee"}
@@ -207,7 +209,7 @@ gr.mostrar(gr.mejora_sobre_ingenua(met))
 3. **Más variables no es mejor.** Forma reciente y tiros ayudaron en validación, pero no en prueba. El modelo base M0 fue el más robusto.
 4. **Conclusión.** Las cuotas ya incorporan la estadística pública, y algo más. Un modelo simple y transparente se acerca, pero no le gana al mercado de forma sistemática.
 
-<p class="ruta">Recorrido sugerido: <b>¿Qué ocurre?</b> → <b>Patrones</b> → <b>El modelo</b> → <b>Explora un partido</b> → <b>Datos y método</b>.</p>
+
 :::
 
 # ¿Qué ocurre? {#que-ocurre}
